@@ -30,6 +30,7 @@ export interface PCR {
   consent_obtained: boolean | null;
   caregiver_present: string | null;
   confidence_notes: string | null;
+  additional_notes: string | null;
 }
 
 export type RecorderState =
@@ -61,4 +62,13 @@ export const emptyPCR = (): PCR => ({
   consent_obtained: null,
   caregiver_present: null,
   confidence_notes: null,
+  additional_notes: null,
 });
+
+export interface SavedPCR {
+  id: number;
+  pcr: PCR;
+  transcript: string;
+  savedAt: Date;
+}
+

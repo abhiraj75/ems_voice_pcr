@@ -42,6 +42,7 @@ class PCR(BaseModel):
 
     # Meta
     confidence_notes: Optional[str] = None
+    additional_notes: Optional[str] = None
 
 
 class TranscriptRequest(BaseModel):

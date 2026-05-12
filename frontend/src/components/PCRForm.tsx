@@ -6,6 +6,7 @@ interface PCRFormProps {
   pcr: PCR;
   onChange: (next: PCR) => void;
   onLooksGood: () => void;
+  isEditing?: boolean;
 }
 
 type PCRKey = keyof PCR;
@@ -18,7 +19,7 @@ function valueOrEmpty(value: string | number | boolean | null) {
   return value === null ? "" : String(value);
 }
 
-export function PCRForm({ pcr, onChange, onLooksGood }: PCRFormProps) {
+export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFormProps) {
   const setField = <K extends PCRKey>(key: K, value: PCR[K]) => {
     onChange({ ...pcr, [key]: value });
   };
@@ -109,7 +110,7 @@ export function PCRForm({ pcr, onChange, onLooksGood }: PCRFormProps) {
           type="submit"
           className="rounded-md bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-100"
         >
-          Looks good
+          {isEditing ? "Update PCR" : "Looks good"}
         </button>
       </div>
 
@@ -245,6 +246,16 @@ export function PCRForm({ pcr, onChange, onLooksGood }: PCRFormProps) {
               </span>
             </label>
           </div>
+        </section>
+
+        <section>
+          <h3 className="mb-3 text-sm font-extrabold uppercase tracking-normal text-slate-800">Additional Notes</h3>
+          <textarea
+            className={`${fieldBase} min-h-24 resize-y`}
+            value={pcr.additional_notes ?? ""}
+            placeholder="Add any extra observations, context, or notes not captured above..."
+            onChange={(event) => setField("additional_notes", event.target.value || null)}
+          />
         </section>
       </div>
     </form>

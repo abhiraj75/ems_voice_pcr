@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { FakeSidebar } from "./components/FakeSidebar";
 import { Header } from "./components/Header";
 import { PCRForm } from "./components/PCRForm";
 import { Recorder } from "./components/Recorder";
+import { SavedRuns } from "./components/SavedRuns";
 import { extractPCR, transcribeAudio } from "./lib/api";
-import { emptyPCR, type PCR, type RecorderState } from "./lib/types";
+import { emptyPCR, type PCR, type RecorderState, type SavedPCR } from "./lib/types";
 
 export default function App() {
   const [state, setState] = useState<RecorderState>("idle");
@@ -12,6 +12,8 @@ export default function App() {
   const [pcr, setPcr] = useState<PCR>(emptyPCR());
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [savedRuns, setSavedRuns] = useState<SavedPCR[]>([]);
+  const [viewingId, setViewingId] = useState<number | null>(null);
 
   const reset = () => {
     setState("idle");
@@ -19,10 +21,12 @@ export default function App() {
     setPcr(emptyPCR());
     setError(null);
     setToast(null);
+    setViewingId(null);
   };
 
   const handleAudioReady = async (blob: Blob) => {
     setError(null);
+    setViewingId(null);
     try {
       setState("transcribing");
       const nextTranscript = await transcribeAudio(blob);
@@ -38,15 +42,42 @@ export default function App() {
   };
 
   const handleLooksGood = () => {
-    setToast("PCR saved (demo mode)");
+    if (viewingId) {
+      // Update existing saved run
+      setSavedRuns((prev) =>
+        prev.map((run) =>
+          run.id === viewingId ? { ...run, pcr: { ...pcr }, transcript } : run
+        )
+      );
+      setToast("PCR updated");
+    } else {
+      // Save new run
+      const saved: SavedPCR = {
+        id: Date.now(),
+        pcr: { ...pcr },
+        transcript,
+        savedAt: new Date(),
+      };
+      setSavedRuns((prev) => [saved, ...prev]);
+      setToast("PCR saved");
+    }
     window.setTimeout(reset, 1100);
+  };
+
+  const handleSelectRun = (run: SavedPCR) => {
+    setPcr({ ...run.pcr });
+    setTranscript(run.transcript);
+    setViewingId(run.id);
+    setState("ready");
+    setError(null);
+    setToast(null);
   };
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
       <div className="flex min-h-[calc(100vh-57px)]">
-        <FakeSidebar />
+        <SavedRuns runs={savedRuns} activeId={viewingId} onSelect={handleSelectRun} />
         <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)]">
             <Recorder
@@ -59,7 +90,12 @@ export default function App() {
             />
 
             {state === "ready" ? (
-              <PCRForm pcr={pcr} onChange={setPcr} onLooksGood={handleLooksGood} />
+              <PCRForm
+                pcr={pcr}
+                onChange={setPcr}
+                onLooksGood={handleLooksGood}
+                isEditing={viewingId !== null}
+              />
             ) : (
               <section className="flex min-h-[520px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
                 <div className="max-w-sm">
