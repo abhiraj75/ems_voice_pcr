@@ -9,26 +9,41 @@ export interface Medication {
 }
 
 export interface PCR {
+  // Patient
   patient_name: string | null;
   patient_age: number | null;
   patient_gender: Gender | null;
+
+  // Incident
   chief_complaint: string | null;
   history: string | null;
   incident_location: string | null;
   scene_type: SceneType | null;
+  allergies: string | null;
+
+  // Vitals
   vital_hr: number | null;
   vital_rr: number | null;
   vital_bp: string | null;
   vital_spo2: number | null;
   vital_gcs: number | null;
+  vital_temp: number | null;
   vital_skin: string | null;
+  pain_scale: number | null;
+
+  // Treatment
   treatment_airway: string | null;
   treatment_iv: string | null;
+  oxygen_administered: string | null;
   medications: Medication[];
+
+  // Disposition
   transport_decision: TransportDecision | null;
   destination: string | null;
   consent_obtained: boolean | null;
   caregiver_present: string | null;
+
+  // Meta
   confidence_notes: string | null;
   additional_notes: string | null;
 }
@@ -48,14 +63,18 @@ export const emptyPCR = (): PCR => ({
   history: null,
   incident_location: null,
   scene_type: null,
+  allergies: null,
   vital_hr: null,
   vital_rr: null,
   vital_bp: null,
   vital_spo2: null,
   vital_gcs: null,
+  vital_temp: null,
   vital_skin: null,
+  pain_scale: null,
   treatment_airway: null,
   treatment_iv: null,
+  oxygen_administered: null,
   medications: [],
   transport_decision: null,
   destination: null,
@@ -71,4 +90,3 @@ export interface SavedPCR {
   transcript: string;
   savedAt: Date;
 }
-

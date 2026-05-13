@@ -149,6 +149,7 @@ export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFo
             {selectInput<SceneType>("scene_type", "Scene type", ["home", "public", "road", "work", "other"], (value) =>
               value ? (value as SceneType) : null,
             )}
+            {textInput("allergies", "Allergies")}
           </div>
         </section>
 
@@ -160,7 +161,9 @@ export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFo
             {textInput("vital_bp", "BP")}
             {numberInput("vital_spo2", "SpO2")}
             {numberInput("vital_gcs", "GCS")}
+            {numberInput("vital_temp", "Temp")}
             {textInput("vital_skin", "Skin")}
+            {numberInput("pain_scale", "Pain (0-10)")}
           </div>
         </section>
 
@@ -179,6 +182,7 @@ export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFo
           <div className="grid gap-4 sm:grid-cols-2">
             {textInput("treatment_airway", "Airway")}
             {textInput("treatment_iv", "IV")}
+            {textInput("oxygen_administered", "Oxygen")}
           </div>
 
           <div className="mt-4 space-y-3">
