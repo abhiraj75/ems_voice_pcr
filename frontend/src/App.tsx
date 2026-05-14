@@ -14,6 +14,7 @@ export default function App() {
   const [toast, setToast] = useState<string | null>(null);
   const [savedRuns, setSavedRuns] = useState<SavedPCR[]>([]);
   const [viewingId, setViewingId] = useState<number | null>(null);
+  const [extractionMs, setExtractionMs] = useState<number | null>(null);
 
   const reset = () => {
     setState("idle");
@@ -22,6 +23,7 @@ export default function App() {
     setError(null);
     setToast(null);
     setViewingId(null);
+    setExtractionMs(null);
   };
 
   const handleAudioReady = async (blob: Blob) => {
@@ -32,7 +34,9 @@ export default function App() {
       const nextTranscript = await transcribeAudio(blob);
       setTranscript(nextTranscript);
       setState("extracting");
+      const t0 = performance.now();
       const nextPcr = await extractPCR(nextTranscript);
+      setExtractionMs(Math.round(performance.now() - t0));
       setPcr(nextPcr);
       setState("ready");
     } catch (err) {
@@ -47,7 +51,9 @@ export default function App() {
     try {
       setTranscript(text);
       setState("extracting");
+      const t0 = performance.now();
       const nextPcr = await extractPCR(text);
+      setExtractionMs(Math.round(performance.now() - t0));
       setPcr(nextPcr);
       setState("ready");
     } catch (err) {
@@ -111,6 +117,7 @@ export default function App() {
                 onChange={setPcr}
                 onLooksGood={handleLooksGood}
                 isEditing={viewingId !== null}
+                extractionMs={extractionMs}
               />
             ) : state === "transcribing" || state === "extracting" ? (
               <section className="rounded-md border border-slate-200 bg-white p-5 animate-pulse">

@@ -7,6 +7,7 @@ interface PCRFormProps {
   onChange: (next: PCR) => void;
   onLooksGood: () => void;
   isEditing?: boolean;
+  extractionMs?: number | null;
 }
 
 type PCRKey = keyof PCR;
@@ -19,7 +20,7 @@ function valueOrEmpty(value: string | number | boolean | null) {
   return value === null ? "" : String(value);
 }
 
-export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFormProps) {
+export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false, extractionMs }: PCRFormProps) {
   const setField = <K extends PCRKey>(key: K, value: PCR[K]) => {
     onChange({ ...pcr, [key]: value });
   };
@@ -104,7 +105,14 @@ export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFo
       <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-extrabold tracking-normal text-slate-950">Patient Care Report</h1>
-          <p className="mt-1 text-sm text-slate-500">Review extracted fields before saving demo mode.</p>
+          <div className="mt-1 flex items-center gap-2">
+            <p className="text-sm text-slate-500">Review extracted fields before saving.</p>
+            {extractionMs != null && (
+              <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800">
+                {(extractionMs / 1000).toFixed(1)}s
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
