@@ -8,9 +8,12 @@ Indian paramedics spend 30-60 minutes on paperwork after ambulance runs, often a
 
 Can an LLM extract clinical data from code-switched Hinglish well enough to save 25+ minutes of paperwork?
 
-## Demo
+## Live Demo
 
-Loom link: add after recording.
+- **Frontend**: [ems-voice-pcr.vercel.app](https://ems-voice-pcr.vercel.app)
+- **Backend**: [ems-voice-pcr.onrender.com](https://ems-voice-pcr.onrender.com)
+
+> Note: Render free tier sleeps after 15 min of inactivity. First request after idle takes ~30s to cold start.
 
 ## What's Built
 
@@ -36,6 +39,7 @@ Loom link: add after recording.
 - Try an example button with a pre-loaded Hinglish handoff
 - Loading skeleton during extraction
 - Extraction timing badge showing speed (e.g. 1.8s)
+- Cancel button that safely discards in-flight API results
 - Export PCR as JSON download
 - Saved PCRs sidebar with select, update, and delete
 - localStorage persistence across page refreshes
