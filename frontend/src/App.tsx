@@ -104,11 +104,16 @@ export default function App() {
     setToast(null);
   };
 
+  const handleDeleteRun = (id: number) => {
+    setSavedRuns((prev) => prev.filter((r) => r.id !== id));
+    if (viewingId === id) reset();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
       <div className="flex min-h-[calc(100vh-57px)]">
-        <SavedRuns runs={savedRuns} activeId={viewingId} onSelect={handleSelectRun} />
+        <SavedRuns runs={savedRuns} activeId={viewingId} onSelect={handleSelectRun} onDelete={handleDeleteRun} />
         <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)]">
             <Recorder

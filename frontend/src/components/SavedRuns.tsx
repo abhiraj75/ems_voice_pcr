@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ClipboardList } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardList, X } from "lucide-react";
 import { useState } from "react";
 import type { SavedPCR } from "../lib/types";
 
@@ -6,13 +6,14 @@ interface SavedRunsProps {
   runs: SavedPCR[];
   activeId: number | null;
   onSelect: (run: SavedPCR) => void;
+  onDelete: (id: number) => void;
 }
 
 function formatTime(date: Date) {
   return date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function SavedRuns({ runs, activeId, onSelect }: SavedRunsProps) {
+export function SavedRuns({ runs, activeId, onSelect, onDelete }: SavedRunsProps) {
   const [open, setOpen] = useState(true);
 
   return (
@@ -58,14 +59,26 @@ export function SavedRuns({ runs, activeId, onSelect }: SavedRunsProps) {
                         : "border-slate-200"
                     }`}
                   >
-                    <p className="text-sm font-semibold text-slate-800">
-                      {run.pcr.chief_complaint || "Unknown complaint"}
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {run.pcr.patient_age ? `${run.pcr.patient_age}${run.pcr.patient_gender === "male" ? "M" : run.pcr.patient_gender === "female" ? "F" : ""}` : "Age unknown"}
-                      {" · "}
-                      {formatTime(run.savedAt)}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-800">
+                          {run.pcr.chief_complaint || "Unknown complaint"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {run.pcr.patient_age ? `${run.pcr.patient_age}${run.pcr.patient_gender === "male" ? "M" : run.pcr.patient_gender === "female" ? "F" : ""}` : "Age unknown"}
+                          {" · "}
+                          {formatTime(run.savedAt)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label="Delete PCR"
+                        onClick={(e) => { e.stopPropagation(); onDelete(run.id); }}
+                        className="shrink-0 rounded p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </button>
                 ))}
               </div>
