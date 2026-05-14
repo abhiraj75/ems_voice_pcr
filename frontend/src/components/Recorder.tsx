@@ -190,6 +190,13 @@ export function Recorder({ state, transcript, error, onAudioReady, onTranscriptR
                 {state === "transcribing" ? "Transcribing..." : "Extracting PCR fields..."}
               </p>
               <p className="mt-1 text-sm text-slate-500">This is the magic bit. Give it a moment.</p>
+              <button
+                type="button"
+                onClick={onReset}
+                className="mt-4 inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
             </>
           )}
 
