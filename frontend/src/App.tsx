@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "./components/Header";
 import { PCRForm } from "./components/PCRForm";
 import { Recorder } from "./components/Recorder";
@@ -12,9 +12,19 @@ export default function App() {
   const [pcr, setPcr] = useState<PCR>(emptyPCR());
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [savedRuns, setSavedRuns] = useState<SavedPCR[]>([]);
+  const [savedRuns, setSavedRuns] = useState<SavedPCR[]>(() => {
+    try {
+      const raw = localStorage.getItem("ems_saved_pcrs");
+      if (!raw) return [];
+      return JSON.parse(raw).map((r: SavedPCR & { savedAt: string }) => ({ ...r, savedAt: new Date(r.savedAt) }));
+    } catch { return []; }
+  });
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [extractionMs, setExtractionMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("ems_saved_pcrs", JSON.stringify(savedRuns));
+  }, [savedRuns]);
 
   const reset = () => {
     setState("idle");
