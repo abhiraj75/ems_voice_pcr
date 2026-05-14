@@ -106,12 +106,29 @@ export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFo
           <h1 className="text-xl font-extrabold tracking-normal text-slate-950">Patient Care Report</h1>
           <p className="mt-1 text-sm text-slate-500">Review extracted fields before saving demo mode.</p>
         </div>
-        <button
-          type="submit"
-          className="rounded-md bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-100"
-        >
-          {isEditing ? "Update PCR" : "Looks good"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const blob = new Blob([JSON.stringify(pcr, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `pcr-${pcr.patient_name?.replace(/\s+/g, "-").toLowerCase() || "unknown"}-${Date.now()}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Export JSON
+          </button>
+          <button
+            type="submit"
+            className="rounded-md bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-100"
+          >
+            {isEditing ? "Update PCR" : "Looks good"}
+          </button>
+        </div>
       </div>
 
       {pcr.confidence_notes && (
