@@ -112,6 +112,31 @@ export default function App() {
                 onLooksGood={handleLooksGood}
                 isEditing={viewingId !== null}
               />
+            ) : state === "transcribing" || state === "extracting" ? (
+              <section className="rounded-md border border-slate-200 bg-white p-5 animate-pulse">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                  <div>
+                    <div className="h-6 w-48 rounded bg-slate-200" />
+                    <div className="mt-2 h-4 w-64 rounded bg-slate-100" />
+                  </div>
+                  <div className="h-9 w-24 rounded-md bg-slate-200" />
+                </div>
+                <div className="mt-5 space-y-6">
+                  {[3, 2, 3, 2, 2].map((cols, sectionIndex) => (
+                    <div key={sectionIndex}>
+                      <div className="mb-3 h-4 w-20 rounded bg-slate-200" />
+                      <div className={`grid gap-4 sm:grid-cols-${cols}`}>
+                        {Array.from({ length: cols }).map((_, i) => (
+                          <div key={i}>
+                            <div className="mb-1 h-3 w-12 rounded bg-slate-100" />
+                            <div className="h-10 rounded-md bg-slate-100" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
             ) : (
               <section className="flex min-h-[520px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
                 <div className="max-w-sm">
