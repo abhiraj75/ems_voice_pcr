@@ -28,7 +28,7 @@ export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFo
     <label className="block">
       <span className="mb-1 block text-xs font-semibold uppercase tracking-normal text-slate-500">{label}</span>
       <input
-        className={fieldBase}
+        className={`${fieldBase} ${pcr[key] === null ? "border-l-2 border-l-amber-400" : ""}`}
         value={valueOrEmpty(pcr[key])}
         placeholder={placeholder}
         onChange={(event) => setField(key, event.target.value || null)}
@@ -41,7 +41,7 @@ export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFo
       <span className="mb-1 block text-xs font-semibold uppercase tracking-normal text-slate-500">{label}</span>
       <input
         type="number"
-        className={fieldBase}
+        className={`${fieldBase} ${pcr[key] === null ? "border-l-2 border-l-amber-400" : ""}`}
         value={valueOrEmpty(pcr[key])}
         placeholder="Not mentioned - add manually"
         onChange={(event) => {
@@ -60,7 +60,7 @@ export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false }: PCRFo
   ) => (
     <label className="block">
       <span className="mb-1 block text-xs font-semibold uppercase tracking-normal text-slate-500">{label}</span>
-      <select className={fieldBase} value={valueOrEmpty(pcr[key])} onChange={(event) => setField(key, onCast(event.target.value))}>
+      <select className={`${fieldBase} ${pcr[key] === null ? "border-l-2 border-l-amber-400" : ""}`} value={valueOrEmpty(pcr[key])} onChange={(event) => setField(key, onCast(event.target.value))}>
         <option value="">Not mentioned - add manually</option>
         {options.map((option) => (
           <option key={option} value={option}>
