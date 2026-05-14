@@ -41,6 +41,21 @@ export default function App() {
     }
   };
 
+  const handleTranscriptReady = async (text: string) => {
+    setError(null);
+    setViewingId(null);
+    try {
+      setTranscript(text);
+      setState("extracting");
+      const nextPcr = await extractPCR(text);
+      setPcr(nextPcr);
+      setState("ready");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setState("idle");
+    }
+  };
+
   const handleLooksGood = () => {
     if (viewingId) {
       // Update existing saved run
@@ -85,6 +100,7 @@ export default function App() {
               transcript={transcript}
               error={error}
               onAudioReady={handleAudioReady}
+              onTranscriptReady={handleTranscriptReady}
               onRecordingStart={() => setState("recording")}
               onReset={reset}
             />
