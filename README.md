@@ -10,6 +10,7 @@ Can an LLM extract clinical data from code-switched Hinglish well enough to save
 
 ## Live Demo
 
+- **Video**: [Watch Demo](https://drive.google.com/file/d/14SPFbeeidzZUDXFPWupayFaEAQakvfwg/view?usp=sharing)
 - **Frontend**: [ems-voice-pcr.vercel.app](https://ems-voice-pcr.vercel.app)
 - **Backend**: [ems-voice-pcr.onrender.com](https://ems-voice-pcr.onrender.com)
 
