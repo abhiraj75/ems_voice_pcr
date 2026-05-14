@@ -1,4 +1,4 @@
-# EMS Voice PCR
+# 108 EMS - Voice PCR
 
 ## The Problem
 
@@ -14,33 +14,52 @@ Loom link: add after recording.
 
 ## What's Built
 
-- Single-page React app for recording a patient handoff.
-- Browser MediaRecorder audio capture as WebM/Opus.
-- FastAPI transcription endpoint using Groq Whisper.
-- FastAPI extraction endpoint using Groq Llama 3.3 70B JSON mode.
-- Editable Patient Care Report form populated from extracted JSON.
-- Amber uncertainty banner when the model flags critical uncertainty.
-- Demo-mode save toast and reset.
+### Core Pipeline
+- Voice recording via browser MediaRecorder (WebM/Opus)
+- Transcription via Groq Whisper (Hinglish/English)
+- Structured extraction via Groq Llama 3.3 70B JSON mode
+- Editable Patient Care Report form with 26 clinical fields
 
-## What's Faked For This Prototype
+### PCR Schema (26 fields across 6 sections)
+- **Patient**: name, age, gender
+- **Incident**: chief complaint, history, location, scene type, allergies
+- **Vitals**: HR, RR, BP, SpO2, GCS, temperature, skin, pain scale
+- **Treatment**: airway, IV, oxygen administered, medications (name/dose/route)
+- **Disposition**: transport decision, destination, consent, caregiver present
+- **Meta**: AI confidence notes, additional notes
 
-- No authentication.
-- No database or persistent storage.
-- No real submission endpoint.
-- No PDF export.
-- Hardcoded crew identity.
-- Optional visual-only recent PCR sidebar.
+### Features
+- Amber uncertainty banner when the AI flags something it's unsure about
+- Amber left-border highlight on null/unfilled fields
+- Audio playback after recording to verify what was said
+- Paste transcript mode for text input without recording
+- Try an example button with a pre-loaded Hinglish handoff
+- Loading skeleton during extraction
+- Extraction timing badge showing speed (e.g. 1.8s)
+- Export PCR as JSON download
+- Saved PCRs sidebar with select, update, and delete
+- localStorage persistence across page refreshes
+- Mobile responsive layout
+
+## What's Not Built (Prototype Scope)
+
+- No authentication or user accounts
+- No database backend (localStorage only)
+- No PDF export
+- No NEMSIS/ePCR gateway integration
+- No multi-language selector
 
 ## What's Next
 
-- Store PCR drafts in a real database.
-- Map fields to NEMSIS-compatible ePCR schemas.
-- Test with real paramedics and noisy ambulance audio.
-- Integrate with NHA or state ePCR gateway workflows.
+- Store PCR drafts in a real database (Supabase/PostgreSQL)
+- Map fields to NEMSIS-compatible ePCR schemas
+- Test with real paramedics and noisy ambulance audio
+- Integrate with NHA or state ePCR gateway workflows
+- PDF generation for hospital handoff
 
 ## Stack
 
-React + TypeScript + Tailwind CSS frontend, FastAPI backend, Groq Whisper + Groq Llama 3.3 70B.
+React 19 + TypeScript + Tailwind CSS frontend, FastAPI backend, Groq Whisper + Groq Llama 3.3 70B.
 
 ## Run Locally
 
