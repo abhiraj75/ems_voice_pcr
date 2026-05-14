@@ -31,6 +31,7 @@ export function Recorder({ state, transcript, error, onAudioReady, onTranscriptR
   const [localError, setLocalError] = useState<string | null>(null);
   const [pasteMode, setPasteMode] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -65,6 +66,8 @@ export function Recorder({ state, transcript, error, onAudioReady, onTranscriptR
         stream.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
         const blob = new Blob(chunksRef.current, { type: recordingMimeType() });
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        setAudioUrl(URL.createObjectURL(blob));
         await onAudioReady(blob);
       };
       recorder.start();
@@ -229,6 +232,9 @@ export function Recorder({ state, transcript, error, onAudioReady, onTranscriptR
         <div className="rounded-md border border-slate-200 bg-white p-4">
           <h2 className="text-sm font-bold uppercase tracking-normal text-slate-500">Transcript</h2>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-800">{transcript}</p>
+          {audioUrl && (
+            <audio controls src={audioUrl} className="mt-3 w-full h-8" />
+          )}
         </div>
       )}
     </section>
