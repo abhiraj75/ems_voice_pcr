@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Header } from "./components/Header";
 import { PCRForm } from "./components/PCRForm";
 import { Recorder } from "./components/Recorder";
@@ -21,12 +21,14 @@ export default function App() {
   });
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [extractionMs, setExtractionMs] = useState<number | null>(null);
+  const genRef = useRef(0);
 
   useEffect(() => {
     localStorage.setItem("ems_saved_pcrs", JSON.stringify(savedRuns));
   }, [savedRuns]);
 
   const reset = () => {
+    genRef.current += 1;
     setState("idle");
     setTranscript("");
     setPcr(emptyPCR());
@@ -37,25 +39,30 @@ export default function App() {
   };
 
   const handleAudioReady = async (blob: Blob) => {
+    const gen = ++genRef.current;
     setError(null);
     setViewingId(null);
     try {
       setState("transcribing");
       const nextTranscript = await transcribeAudio(blob);
+      if (gen !== genRef.current) return;
       setTranscript(nextTranscript);
       setState("extracting");
       const t0 = performance.now();
       const nextPcr = await extractPCR(nextTranscript);
+      if (gen !== genRef.current) return;
       setExtractionMs(Math.round(performance.now() - t0));
       setPcr(nextPcr);
       setState("ready");
     } catch (err) {
+      if (gen !== genRef.current) return;
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setState("idle");
     }
   };
 
   const handleTranscriptReady = async (text: string) => {
+    const gen = ++genRef.current;
     setError(null);
     setViewingId(null);
     try {
@@ -63,10 +70,12 @@ export default function App() {
       setState("extracting");
       const t0 = performance.now();
       const nextPcr = await extractPCR(text);
+      if (gen !== genRef.current) return;
       setExtractionMs(Math.round(performance.now() - t0));
       setPcr(nextPcr);
       setState("ready");
     } catch (err) {
+      if (gen !== genRef.current) return;
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setState("idle");
     }
@@ -144,10 +153,16 @@ export default function App() {
                   <div className="h-9 w-24 rounded-md bg-slate-200" />
                 </div>
                 <div className="mt-5 space-y-6">
-                  {[3, 2, 3, 2, 2].map((cols, sectionIndex) => (
+                  {([
+                    { cols: 3, cls: "sm:grid-cols-3" },
+                    { cols: 2, cls: "sm:grid-cols-2" },
+                    { cols: 3, cls: "sm:grid-cols-3" },
+                    { cols: 2, cls: "sm:grid-cols-2" },
+                    { cols: 2, cls: "sm:grid-cols-2" },
+                  ]).map(({ cols, cls }, sectionIndex) => (
                     <div key={sectionIndex}>
                       <div className="mb-3 h-4 w-20 rounded bg-slate-200" />
-                      <div className={`grid gap-4 sm:grid-cols-${cols}`}>
+                      <div className={`grid gap-4 ${cls}`}>
                         {Array.from({ length: cols }).map((_, i) => (
                           <div key={i}>
                             <div className="mb-1 h-3 w-12 rounded bg-slate-100" />

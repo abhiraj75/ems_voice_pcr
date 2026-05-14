@@ -49,11 +49,13 @@ export function SavedRuns({ runs, activeId, onSelect, onDelete }: SavedRunsProps
             ) : (
               <div className="space-y-2">
                 {runs.map((run) => (
-                  <button
+                  <div
                     key={run.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onSelect(run)}
-                    className={`w-full rounded-md border px-3 py-2 text-left transition hover:bg-slate-50 ${
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect(run); }}
+                    className={`w-full cursor-pointer rounded-md border px-3 py-2 text-left transition hover:bg-slate-50 ${
                       activeId === run.id
                         ? "border-red-300 bg-red-50"
                         : "border-slate-200"
@@ -79,7 +81,7 @@ export function SavedRuns({ runs, activeId, onSelect, onDelete }: SavedRunsProps
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             )}

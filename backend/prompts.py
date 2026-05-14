@@ -30,7 +30,8 @@ SCHEMA:
   "destination": string | null,
   "consent_obtained": boolean | null,
   "caregiver_present": string | null,
-  "confidence_notes": string | null
+  "confidence_notes": string | null,
+  "additional_notes": string | null
 }
 
 RULES:
@@ -47,7 +48,8 @@ RULES:
 11. allergies: extract if mentioned. "No known allergies" / "NKDA" / "koi allergy nahi" -> "no known allergies". If not mentioned, null.
 12. oxygen_administered: extract delivery method and flow rate if stated. "O2 4L nasal cannula" -> "4L nasal cannula". "Oxygen mask lagaya" -> "oxygen mask". If not mentioned, null.
 13. scene_type must be exactly one of: "home", "public", "road", "work", "other". Map school, clinic, temple, market, etc. to the closest match (school -> "public", clinic -> "work", market -> "public"). If unsure, use "other".
-14. If uncertain about a critical field (vitals, meds, transport decision), note briefly in confidence_notes. Otherwise null.
+14. additional_notes: capture any clinically relevant info that does not fit other fields (e.g. past medical history, ongoing medications, mechanism of injury details). If nothing extra, null.
+15. If uncertain about a critical field (vitals, meds, transport decision), note briefly in confidence_notes. Otherwise null.
 
 EXAMPLE:
 
