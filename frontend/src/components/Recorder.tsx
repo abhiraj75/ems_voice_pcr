@@ -1,4 +1,4 @@
-import { ClipboardPaste, Mic, RefreshCcw, Sparkles, Square } from "lucide-react";
+import { ClipboardPaste, Mic, Play, RefreshCcw, Sparkles, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { RecorderState } from "../lib/types";
 
@@ -114,7 +114,7 @@ export function Recorder({ state, transcript, error, onAudioReady, onTranscriptR
               <p className="mt-4 text-base font-semibold text-slate-900">Tap to record patient handoff</p>
               <p className="mt-1 text-sm text-slate-500">Speak naturally in Hinglish or English.</p>
 
-              <div className="mt-6 flex items-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => setPasteMode(true)}
@@ -131,6 +131,15 @@ export function Recorder({ state, transcript, error, onAudioReady, onTranscriptR
                   <Sparkles className="h-3.5 w-3.5" />
                   Try an example
                 </button>
+                <a
+                  href="https://drive.google.com/file/d/14SPFbeeidzZUDXFPWupayFaEAQakvfwg/view?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  <Play className="h-3.5 w-3.5" />
+                  Watch demo
+                </a>
               </div>
             </>
           )}
