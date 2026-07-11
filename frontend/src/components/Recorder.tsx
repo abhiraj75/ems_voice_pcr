@@ -86,11 +86,13 @@ export function Recorder({ state, transcript, error, onAudioReady, onTranscriptR
   const handlePasteSubmit = () => {
     const trimmed = pasteText.trim();
     if (!trimmed) return;
+    setLocalError(null);
     setPasteMode(false);
     onTranscriptReady(trimmed);
   };
 
   const handleTryExample = () => {
+    setLocalError(null);
     setPasteMode(false);
     onTranscriptReady(EXAMPLE_TRANSCRIPT);
   };

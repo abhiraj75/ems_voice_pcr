@@ -2,9 +2,7 @@ import type { PCR } from "./types";
 
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-// The backend runs on Render's free tier, which sleeps after inactivity and can
-// take ~30s to cold start. Give requests a generous ceiling so a sleeping
-// backend surfaces a clear error instead of hanging indefinitely.
+// The backend sleeps after inactivity and can take ~30s to cold start. 
 const REQUEST_TIMEOUT_MS = 60_000;
 
 async function readError(res: Response): Promise<string> {
