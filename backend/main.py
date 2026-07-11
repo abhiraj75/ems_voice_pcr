@@ -25,11 +25,21 @@ def groq_client() -> Groq:
         )
     return Groq(api_key=api_key)
 
+_default_origins = (
+    "https://ems-voice-pcr.vercel.app,"
+    "http://localhost:5173,"
+    "http://localhost:4173"
+)
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", _default_origins).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=allowed_origins,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
