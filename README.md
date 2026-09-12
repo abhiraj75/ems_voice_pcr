@@ -21,7 +21,7 @@ Can an LLM extract clinical data from code-switched Hinglish well enough to save
 ### Core Pipeline
 - Voice recording via browser MediaRecorder (WebM/Opus)
 - Transcription via Groq Whisper (Hinglish/English)
-- Structured extraction via Groq Llama 3.3 70B JSON mode
+- Structured extraction via Groq GPT-OSS 120B JSON mode
 - Editable Patient Care Report form with 26 clinical fields
 
 ### PCR Schema (26 fields across 6 sections)
@@ -64,7 +64,7 @@ Can an LLM extract clinical data from code-switched Hinglish well enough to save
 
 ## Stack
 
-React 19 + TypeScript + Tailwind CSS frontend, FastAPI backend, Groq Whisper + Groq Llama 3.3 70B.
+React 19 + TypeScript + Tailwind CSS frontend, FastAPI backend, Groq Whisper + Groq GPT-OSS 120B.
 
 ## Run Locally
 

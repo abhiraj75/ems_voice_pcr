@@ -70,13 +70,14 @@ async def extract(payload: TranscriptRequest) -> PCR:
     raw_output = ""
     try:
         completion = groq_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[
                 {"role": "system", "content": EXTRACTION_PROMPT},
                 {"role": "user", "content": payload.transcript},
             ],
             temperature=0.1,
-            max_tokens=1024,
+            max_tokens=2048,
+            reasoning_effort="low",
             response_format={"type": "json_object"},
         )
         raw_output = completion.choices[0].message.content or ""
