@@ -84,9 +84,17 @@ export const emptyPCR = (): PCR => ({
   additional_notes: null,
 });
 
+// Everything the readback speaks. Confirmation holds only while this is unchanged.
+export const readbackKey = (pcr: PCR) =>
+  JSON.stringify([
+    pcr.vital_bp, pcr.vital_hr, pcr.vital_rr, pcr.vital_spo2,
+    pcr.vital_gcs, pcr.vital_temp, pcr.pain_scale, pcr.medications,
+  ]);
+
 export interface SavedPCR {
   id: number;
   pcr: PCR;
   transcript: string;
   savedAt: Date;
+  vitalsConfirmed?: boolean;
 }

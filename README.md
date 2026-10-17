@@ -19,10 +19,11 @@ Can an LLM extract clinical data from code-switched Hinglish well enough to save
 ## What's Built
 
 ### Core Pipeline
-- Voice recording via browser MediaRecorder (WebM/Opus)
-- Transcription via Groq Whisper (Hinglish/English)
+- Voice recording via browser MediaRecorder, converted in-browser to 16 kHz mono WAV in 30s chunks
+- Transcription via Gnani **Prisma v2.5** (`en-IN` Hinglish, number normalization, EMS drug-name biasing)
 - Structured extraction via Groq GPT-OSS 120B JSON mode
 - Editable Patient Care Report form with 26 clinical fields
+- Vitals and medications read back aloud via Gnani **Timbre v3.0**; the medic taps Confirm after listening, and any later edit voids the confirmation
 
 ### PCR Schema (26 fields across 6 sections)
 - **Patient**: name, age, gender
@@ -52,7 +53,7 @@ Can an LLM extract clinical data from code-switched Hinglish well enough to save
 - No database backend (localStorage only)
 - No PDF export
 - No NEMSIS/ePCR gateway integration
-- No multi-language selector
+- No multi-language selector (Hinglish only)
 
 ## What's Next
 
@@ -64,7 +65,7 @@ Can an LLM extract clinical data from code-switched Hinglish well enough to save
 
 ## Stack
 
-React 19 + TypeScript + Tailwind CSS frontend, FastAPI backend, Groq Whisper + Groq GPT-OSS 120B.
+React 19 + TypeScript + Tailwind CSS frontend, FastAPI backend, Gnani Prisma v2.5 (STT) + Timbre v3.0 (TTS), Groq GPT-OSS 120B (extraction).
 
 ## Run Locally
 
@@ -76,7 +77,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# Add GROQ_API_KEY to backend/.env
+# Add GNANI_API_KEY (Prisma + Timbre) and GROQ_API_KEY (extraction) to backend/.env
+python test_main.py
 uvicorn main:app --reload --port 8000
 ```
 

@@ -1,6 +1,7 @@
-import { Plus, Trash2 } from "lucide-react";
-import type { ChangeEvent } from "react";
-import type { Gender, PCR, SceneType, TransportDecision } from "../lib/types";
+import { CheckCircle2, Loader2, Plus, Trash2, Volume2 } from "lucide-react";
+import { useState, type ChangeEvent } from "react";
+import { readbackAudio } from "../lib/api";
+import { readbackKey, type Gender, type PCR, type SceneType, type TransportDecision } from "../lib/types";
 
 interface PCRFormProps {
   pcr: PCR;
@@ -8,6 +9,8 @@ interface PCRFormProps {
   onLooksGood: () => void;
   isEditing?: boolean;
   extractionMs?: number | null;
+  vitalsConfirmed: boolean;
+  onConfirmVitals: () => void;
 }
 
 type PCRKey = keyof PCR;
@@ -20,7 +23,30 @@ function valueOrEmpty(value: string | number | boolean | null) {
   return value === null ? "" : String(value);
 }
 
-export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false, extractionMs }: PCRFormProps) {
+export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false, extractionMs, vitalsConfirmed, onConfirmVitals }: PCRFormProps) {
+  const [playing, setPlaying] = useState(false);
+  const [heardKey, setHeardKey] = useState<string | null>(null);
+  const [readbackError, setReadbackError] = useState<string | null>(null);
+
+  const playReadback = async () => {
+    const key = readbackKey(pcr);
+    setPlaying(true);
+    setReadbackError(null);
+    try {
+      const url = URL.createObjectURL(await readbackAudio(pcr));
+      const audio = new Audio(url);
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        setPlaying(false);
+        setHeardKey(key);
+      };
+      await audio.play();
+    } catch (err) {
+      setPlaying(false);
+      setReadbackError(err instanceof Error ? err.message : "Readback failed.");
+    }
+  };
+
   const setField = <K extends PCRKey>(key: K, value: PCR[K]) => {
     onChange({ ...pcr, [key]: value });
   };
@@ -179,7 +205,40 @@ export function PCRForm({ pcr, onChange, onLooksGood, isEditing = false, extract
         </section>
 
         <section>
-          <h3 className="mb-3 text-sm font-extrabold uppercase tracking-normal text-slate-800">Vitals</h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-sm font-extrabold uppercase tracking-normal text-slate-800">Vitals</h3>
+            {vitalsConfirmed ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-bold text-green-800">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Vitals confirmed by medic
+              </span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={playReadback}
+                  disabled={playing}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  {playing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Volume2 className="h-3.5 w-3.5" />}
+                  {playing ? "Reading back..." : "Read back"}
+                </button>
+                {heardKey === readbackKey(pcr) && (
+                  <button
+                    type="button"
+                    onClick={onConfirmVitals}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-green-700"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Confirm vitals
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {readbackError && (
+            <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{readbackError}</p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {numberInput("vital_hr", "HR")}
             {numberInput("vital_rr", "RR")}

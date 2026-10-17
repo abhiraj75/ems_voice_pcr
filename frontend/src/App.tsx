@@ -4,7 +4,7 @@ import { PCRForm } from "./components/PCRForm";
 import { Recorder } from "./components/Recorder";
 import { SavedRuns } from "./components/SavedRuns";
 import { extractPCR, transcribeAudio } from "./lib/api";
-import { emptyPCR, type PCR, type RecorderState, type SavedPCR } from "./lib/types";
+import { emptyPCR, readbackKey, type PCR, type RecorderState, type SavedPCR } from "./lib/types";
 
 export default function App() {
   const [state, setState] = useState<RecorderState>("idle");
@@ -21,6 +21,9 @@ export default function App() {
   });
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [extractionMs, setExtractionMs] = useState<number | null>(null);
+  // Readback key the medic confirmed; any edit to vitals/meds changes the key and voids it.
+  const [confirmedKey, setConfirmedKey] = useState<string | null>(null);
+  const vitalsConfirmed = confirmedKey === readbackKey(pcr);
   const genRef = useRef(0);
 
   useEffect(() => {
@@ -36,6 +39,7 @@ export default function App() {
     setToast(null);
     setViewingId(null);
     setExtractionMs(null);
+    setConfirmedKey(null);
   };
 
   const handleAudioReady = async (blob: Blob) => {
@@ -86,7 +90,7 @@ export default function App() {
       // Update existing saved run
       setSavedRuns((prev) =>
         prev.map((run) =>
-          run.id === viewingId ? { ...run, pcr: { ...pcr }, transcript } : run
+          run.id === viewingId ? { ...run, pcr: { ...pcr }, transcript, vitalsConfirmed } : run
         )
       );
       setToast("PCR updated");
@@ -97,6 +101,7 @@ export default function App() {
         pcr: { ...pcr },
         transcript,
         savedAt: new Date(),
+        vitalsConfirmed,
       };
       setSavedRuns((prev) => [saved, ...prev]);
       setToast("PCR saved");
@@ -108,6 +113,7 @@ export default function App() {
     setPcr({ ...run.pcr });
     setTranscript(run.transcript);
     setViewingId(run.id);
+    setConfirmedKey(run.vitalsConfirmed ? readbackKey(run.pcr) : null);
     setState("ready");
     setError(null);
     setToast(null);
@@ -142,6 +148,8 @@ export default function App() {
                 onLooksGood={handleLooksGood}
                 isEditing={viewingId !== null}
                 extractionMs={extractionMs}
+                vitalsConfirmed={vitalsConfirmed}
+                onConfirmVitals={() => setConfirmedKey(readbackKey(pcr))}
               />
             ) : state === "transcribing" || state === "extracting" ? (
               <section className="rounded-md border border-slate-200 bg-white p-5 animate-pulse">
