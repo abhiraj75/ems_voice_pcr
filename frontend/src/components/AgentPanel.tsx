@@ -13,7 +13,7 @@ interface AgentPanelProps {
   onTranscript: (transcript: string) => void;
 }
 
-type Status = "idle" | "connecting" | "live" | "ending";
+type Status = "idle" | "connecting" | "reconnecting" | "live" | "ending";
 type Line = { who: "medic" | "agent" | "alert" | "readback" | "confirm" | "question"; text: string };
 
 const TAP_MS = 300; // shorter than this is a tap (stay on), longer is a hold (release sends)
@@ -90,6 +90,12 @@ export function AgentPanel({ agentRef, highlight, notes, onStart, onPcr, onTrans
       case "error":
         setThinking(false);
         return setError(event.error);
+      case "reconnecting":
+        setSpeaking(false);
+        setTalking(false);
+        setThinking(false);
+        setLatched(false);
+        return setStatus("reconnecting");
       case "closed":
         agentRef.current = null;
         setSpeaking(false);
@@ -154,7 +160,7 @@ export function AgentPanel({ agentRef, highlight, notes, onStart, onPcr, onTrans
 
   const live = status === "live";
   const pttLabel =
-    status === "connecting" ? "Connecting..." : status === "ending" ? "Finishing up..." : talking ? "Listening" : speaking ? "Agent speaking" : thinking ? "Thinking..." : "Hold to talk";
+    status === "connecting" ? "Connecting..." : status === "reconnecting" ? "Reconnecting..." : status === "ending" ? "Finishing up..." : talking ? "Listening" : speaking ? "Agent speaking" : thinking ? "Thinking..." : "Hold to talk";
   const pttHint = talking
     ? latched ? "Tap to send" : "Release to send"
     : speaking ? "Press to cut in" : live && !thinking ? "Or tap once to start and tap again to send" : "";

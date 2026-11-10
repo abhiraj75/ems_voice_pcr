@@ -136,6 +136,7 @@ class AgentSession:
         self.closed = False
         self.language: str | None = None  # chosen at the start; None until then
         self.language_asks = 0
+        self.inputs = 0  # presses + typed messages, across reconnects; each costs a paid call
 
     @property
     def lang(self) -> str:

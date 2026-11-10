@@ -115,7 +115,8 @@ mic ─ 16 kHz PCM while held ─ WebSocket ▶ /ws/agent
 - **Tools**: `update_fields` (fields and medications in one call), `remove_medication`, `mark_answered`, `say`, `readback`, `finish`, `nothing_to_record`. A tool call that fails validation is returned to the model and nothing is written.
 - **Fixed wording for anything safety-relevant**: questions, "Noted" confirmations, alerts and readback are built from the form. The model only records data and handles side questions. All spoken wording lives in [`backend/languages.py`](backend/languages.py).
 - **Rate limits**: one LLM call per turn, segments that arrive mid-turn are merged, Groq's retry hints are honoured, and if the 120B model's daily token cap is spent the agent falls back to `gpt-oss-20b`.
-- **Guardrails**: 14-minute session cap (under Gnani's 15-minute limit), at most 3 concurrent sessions, WebSocket origin check, CORS allowlist.
+- **Dropped connections**: Render's free tier cuts WebSockets mid-session, so the browser pings every 3 seconds and reconnects with its session id; the server keeps the report and conversation for 5 minutes and re-asks the current question.
+- **Guardrails**: 30-minute session cap, at most 3 concurrent sessions, WebSocket origin check, CORS allowlist.
 - **Privacy**: spoken words and transcripts are never logged. Audio goes to Gnani and text to Groq for processing; saved reports stay in the browser.
 
 ## Stack

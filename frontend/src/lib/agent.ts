@@ -2,7 +2,8 @@ import { BASE } from "./api";
 import type { Issue, PCR } from "./types";
 
 export type AgentEvent =
-  | { type: "ready" }
+  | { type: "ready"; session: string }
+  | { type: "reconnecting" }
   | { type: "transcript"; text: string }
   | { type: "pcr"; pcr: PCR }
   | { type: "issues"; issues: Issue[] }
@@ -18,6 +19,8 @@ const AGENT_URL = `${BASE.replace(/^http/, "ws")}/ws/agent`;
 const TTS_RATE = 24_000;
 const PLAYBACK_TAIL_MS = 300; // bridges gaps between speech chunks so the "speaking" state doesn't flicker
 const QUIET_PEAK = 200; // out of 32767: below this for a whole press, no real sound reached us
+const PING_MS = 3_000; // the server treats 10 s of silence as a dead connection
+const RECONNECTS = 6; // Render's free tier drops WebSockets mid-session; resume instead of ending
 
 // Runs in a 16 kHz AudioContext (the browser resamples the mic), so it only has to cut
 // 512-sample PCM16 frames: the 1024-byte frames Gnani's realtime STT expects, at real-time pace.
@@ -50,6 +53,10 @@ export class AgentClient {
   private peak = 0;
   private playing = false;
   private tailTimer = 0;
+  private session = ""; // server session id, used to resume after a dropped connection
+  private retries = 0;
+  private ending = false; // stop() or close() was called, so a closed socket is expected
+  private pingTimer = 0;
 
   constructor(private onEvent: (event: AgentEvent) => void) {}
 
@@ -67,24 +74,42 @@ export class AgentClient {
     URL.revokeObjectURL(url);
     const frames = new AudioWorkletNode(this.inCtx, "pcm16-frames", { numberOfOutputs: 0 });
     this.inCtx.createMediaStreamSource(this.mic).connect(frames);
-
-    const ws = new WebSocket(AGENT_URL);
-    ws.binaryType = "arraybuffer";
-    this.ws = ws;
     frames.port.onmessage = (event) => {
       if (!this.talking) return;
       this.peak = Math.max(this.peak, ...new Int16Array(event.data).map(Math.abs));
-      if (ws.readyState === WebSocket.OPEN) ws.send(event.data);
+      if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(event.data);
     };
+    this.connect();
+    this.pingTimer = window.setInterval(() => this.send({ type: "ping" }), PING_MS);
+  }
+
+  private connect() {
+    if (this.ending) return;
+    const ws = new WebSocket(this.session ? `${AGENT_URL}?resume=${this.session}` : AGENT_URL);
+    ws.binaryType = "arraybuffer";
+    this.ws = ws;
     ws.onmessage = (event) => {
       if (typeof event.data !== "string") return this.play(event.data);
       const parsed = JSON.parse(event.data) as AgentEvent;
       if (parsed.type === "speaking") return; // the server only knows when it finished sending; playback decides
       if (parsed.type === "stop_audio") this.stopAudio();
+      if (parsed.type === "ready") {
+        if (this.session) this.stopAudio(); // resumed: the agent re-asks, so drop the cut-off speech
+        this.session = parsed.session;
+        this.retries = 0;
+      }
       this.onEvent(parsed);
     };
-    ws.onerror = () => this.onEvent({ type: "error", error: "Lost connection to the agent." });
     ws.onclose = () => {
+      if (this.ws !== ws) return;
+      if (!this.ending && this.session && this.retries < RECONNECTS) {
+        this.talking = false; // a press in flight is lost; the agent asks again
+        this.onEvent({ type: "reconnecting" });
+        window.setTimeout(() => this.connect(), 500 * 2 ** this.retries++);
+        return;
+      }
+      if (!this.ending) this.onEvent({ type: "error", error: "Lost connection to the agent." });
+      window.clearInterval(this.pingTimer);
       // Let already-scheduled speech finish playing before tearing down audio.
       const remaining = this.outCtx ? Math.max(0, this.playAt - this.outCtx.currentTime) : 0;
       window.setTimeout(() => this.release(), remaining * 1000);
@@ -119,11 +144,14 @@ export class AgentClient {
 
   /** Stop listening; the server finishes in-flight turns and speech, then closes. */
   stop() {
+    this.ending = true;
     this.mic?.getTracks().forEach((track) => track.stop());
     this.send({ type: "stop" });
   }
 
   close() {
+    this.ending = true;
+    window.clearInterval(this.pingTimer);
     this.ws?.close();
     this.release();
   }

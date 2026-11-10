@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from contextlib import aclosing
 
 import httpx
@@ -15,7 +16,8 @@ from starlette.websockets import WebSocketState
 from agent import AgentSession, groq_client
 from prompts import EXTRACTION_PROMPT
 from schemas import PCR, TranscriptRequest
-from languages import TTS_CODES
+import rules
+from languages import ASK_LANGUAGE, ASK_LANGUAGE_ENGLISH, TTS_CODES
 from voice import EMS_TERMS, PRISMA_MODEL, READBACK_SPEED, STT_TOPIC, TIMBRE, gnani_headers, pcm_to_wav, readback_text, tts_stream
 
 load_dotenv()
@@ -31,12 +33,18 @@ MAX_CHUNK_BYTES = 2_000_000  # 60s of 16 kHz 16-bit mono WAV, Prisma's per-reque
 MAX_READBACK_CHARS = 1000
 # Every live agent session spends paid Gnani and Groq calls.
 MAX_AGENT_SESSIONS = 3
-AGENT_SESSION_SECONDS = 14 * 60
+AGENT_SESSION_SECONDS = 30 * 60  # push-to-talk sends each press as its own Prisma request, so Gnani's 15-min stream cap doesn't apply
 PRESS_CHUNK_BYTES = 960_000  # 30 s of 16 kHz PCM16, Prisma's recommended request size
 MAX_PRESS_BYTES = 3_840_000  # 2 min per press
 MIN_PRESS_BYTES = 8_000  # 0.25 s: shorter is a tap with no speech
-MAX_SESSION_INPUTS = 150  # far above a real run (~25 turns); bounds paid calls from one socket
+MAX_SESSION_INPUTS = 150  # far above a real run (~25 turns); bounds paid calls from one session
+# Render's free tier cuts WebSockets mid-session without telling the server. The browser pings every
+# 3 s, so silence means the socket is gone; the session is parked and the browser resumes it by id.
+IDLE_SECONDS = 10
+RESUME_SECONDS = 5 * 60
 active_agent_sessions = 0
+live_sessions: dict[str, asyncio.Task] = {}  # id -> the task reading that session's socket
+parked_sessions: dict[str, tuple[AgentSession, float]] = {}  # id -> (session, parked at)
 
 
 def redact(text: str) -> str:
@@ -239,18 +247,32 @@ async def agent_ws(ws: WebSocket) -> None:
         await ws.close(code=1008)
         return
     await ws.accept()
+    resume = ws.query_params.get("resume", "")
+    if resume in live_sessions:  # the dropped socket's handler hasn't noticed yet: take the session over
+        live_sessions[resume].cancel()
+        for _ in range(50):
+            if resume not in live_sessions:
+                break
+            await asyncio.sleep(0.1)
+    now = time.monotonic()
+    for key, (_, parked_at) in list(parked_sessions.items()):
+        if now - parked_at > RESUME_SECONDS:
+            del parked_sessions[key]
     if active_agent_sessions >= MAX_AGENT_SESSIONS:
         await ws.send_json({"type": "error", "error": "Too many live sessions right now. Try again shortly."})
         await ws.close()
         return
+    resumed = resume in parked_sessions
+    session = parked_sessions.pop(resume)[0] if resumed else AgentSession()
+    session_id = resume if resumed else uuid.uuid4().hex
     active_agent_sessions += 1
-    session = AgentSession()
     speaker = Speaker(ws, session)
     turns: set[asyncio.Task] = set()
     # Push-to-talk: we know exactly when the medic spoke, so a press is transcribed whole on release.
     press_audio = bytearray()
     talking = False
-    inputs = 0  # presses + typed messages; each costs a paid Prisma and/or Groq call
+    stopped = False  # the medic ended the session, as opposed to the connection dropping
+    done: set = set()
 
     async def turn(text: str) -> None:
         await ws.send_json({"type": "transcript", "text": text})
@@ -301,15 +323,26 @@ async def agent_ws(ws: WebSocket) -> None:
             await ws.send_json({"type": "turn_done", "spoke": False})
 
     try:
-        await ws.send_json({"type": "ready"})
-        opening = session.opening()
-        await ws.send_json({"type": "agent_text", "source": "question", "text": session.opening_display()})
-        speaker.queue.put_nowait((opening, TIMBRE["speed"]))
+        await ws.send_json({"type": "ready", "session": session_id})
+        if resumed:  # whatever was said around the drop may be lost, so resend the report and re-ask
+            await ws.send_json({"type": "pcr", "pcr": session.pcr.model_dump()})
+            await ws.send_json({"type": "issues", "issues": rules.check(session.pcr, session.lang)})
+            question, display = session.current_question, session.question_display
+        else:
+            question, display = session.opening(), session.opening_display()
+        if session.language is None and resumed:
+            question, display = ASK_LANGUAGE, ASK_LANGUAGE_ENGLISH
+        if question:
+            await ws.send_json({"type": "agent_text", "source": "question", "text": display})
+            speaker.queue.put_nowait((question, TIMBRE["speed"]))
 
         async def from_browser() -> None:
-            nonlocal talking, inputs
+            nonlocal talking, stopped
             while True:
-                msg = await ws.receive()
+                try:
+                    msg = await asyncio.wait_for(ws.receive(), IDLE_SECONDS)
+                except TimeoutError:
+                    return  # no ping: the connection is gone even though no close arrived
                 if msg["type"] == "websocket.disconnect":
                     return
                 if msg.get("bytes"):
@@ -317,12 +350,12 @@ async def agent_ws(ws: WebSocket) -> None:
                         press_audio.extend(msg["bytes"])
                     continue
                 data = json.loads(msg.get("text") or "{}")
-                if data.get("type") in ("text", "talk_end") and inputs >= MAX_SESSION_INPUTS:
+                if data.get("type") in ("text", "talk_end") and session.inputs >= MAX_SESSION_INPUTS:
                     talking = False
                     await ws.send_json({"type": "error", "error": "This session has reached its limit. End it and start a new one."})
                     await ws.send_json({"type": "turn_done", "spoke": False})
                 elif data.get("type") == "text" and str(data.get("text", "")).strip():
-                    inputs += 1
+                    session.inputs += 1
                     await speaker.interrupt()
                     spawn(turn(str(data["text"])[:2000]))
                 elif data.get("type") == "talk_start":
@@ -338,7 +371,7 @@ async def agent_ws(ws: WebSocket) -> None:
                         await ws.send_json({"type": "error", "error": "Didn't catch that. Please say it again."})
                         await ws.send_json({"type": "turn_done", "spoke": False})
                     else:
-                        inputs += 1
+                        session.inputs += 1
                         spawn(transcribe_press(pcm))
                 elif data.get("type") == "set_pcr":
                     try:
@@ -346,15 +379,20 @@ async def agent_ws(ws: WebSocket) -> None:
                     except (ValidationError, KeyError, TypeError):
                         await ws.send_json({"type": "error", "error": "Invalid PCR edit ignored."})
                 elif data.get("type") == "stop":
+                    stopped = True
                     return
 
         tasks = [asyncio.create_task(from_browser())]
+        live_sessions[session_id] = tasks[0]
         done, _ = await asyncio.wait(tasks, timeout=AGENT_SESSION_SECONDS, return_when=asyncio.FIRST_COMPLETED)
         if not done:
-            await ws.send_json({"type": "error", "error": "Session time limit reached (14 min)."})
+            await ws.send_json({"type": "error", "error": "Session time limit reached (30 min). Save the report, then start a new session."})
+        elif not tasks[0].cancelled() and tasks[0].exception():  # don't let a crash look like a normal end of session
+            exc = tasks[0].exception()
+            await ws.send_json({"type": "error", "error": server_error(exc, "Live session").detail["error"]})
         for task in tasks:
             task.cancel()
-        if ws.client_state == WebSocketState.CONNECTED:  # stopped, not disconnected: finish what's in flight
+        if stopped and ws.client_state == WebSocketState.CONNECTED:  # finish what's in flight
             await asyncio.gather(*turns, return_exceptions=True)
             while speaker.speaking or not speaker.queue.empty():
                 await asyncio.sleep(0.1)
@@ -367,6 +405,9 @@ async def agent_ws(ws: WebSocket) -> None:
             pass
     finally:
         active_agent_sessions -= 1
+        live_sessions.pop(session_id, None)
+        if not stopped and done:  # dropped, not ended or timed out: keep it for the browser to resume
+            parked_sessions[session_id] = (session, time.monotonic())
         speaker.close()
         for task in turns:
             task.cancel()
