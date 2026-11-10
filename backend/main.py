@@ -34,6 +34,8 @@ MAX_AGENT_SESSIONS = 3
 AGENT_SESSION_SECONDS = 14 * 60
 PRESS_CHUNK_BYTES = 960_000  # 30 s of 16 kHz PCM16, Prisma's recommended request size
 MAX_PRESS_BYTES = 3_840_000  # 2 min per press
+MIN_PRESS_BYTES = 8_000  # 0.25 s: shorter is a tap with no speech
+MAX_SESSION_INPUTS = 150  # far above a real run (~25 turns); bounds paid calls from one socket
 active_agent_sessions = 0
 
 
@@ -232,6 +234,7 @@ async def agent_ws(ws: WebSocket) -> None:
     # Push-to-talk: we know exactly when the medic spoke, so a press is transcribed whole on release.
     press_audio = bytearray()
     talking = False
+    inputs = 0  # presses + typed messages; each costs a paid Prisma and/or Groq call
 
     async def turn(text: str) -> None:
         await ws.send_json({"type": "transcript", "text": text})
@@ -288,7 +291,7 @@ async def agent_ws(ws: WebSocket) -> None:
         speaker.queue.put_nowait((opening, TIMBRE["speed"]))
 
         async def from_browser() -> None:
-            nonlocal talking
+            nonlocal talking, inputs
             while True:
                 msg = await ws.receive()
                 if msg["type"] == "websocket.disconnect":
@@ -298,16 +301,29 @@ async def agent_ws(ws: WebSocket) -> None:
                         press_audio.extend(msg["bytes"])
                     continue
                 data = json.loads(msg.get("text") or "{}")
-                if data.get("type") == "text" and str(data.get("text", "")).strip():
+                if data.get("type") in ("text", "talk_end") and inputs >= MAX_SESSION_INPUTS:
+                    talking = False
+                    await ws.send_json({"type": "error", "error": "This session has reached its limit. End it and start a new one."})
+                    await ws.send_json({"type": "turn_done", "spoke": False})
+                elif data.get("type") == "text" and str(data.get("text", "")).strip():
+                    inputs += 1
                     await speaker.interrupt()
                     spawn(turn(str(data["text"])[:2000]))
                 elif data.get("type") == "talk_start":
                     talking = True
                     press_audio.clear()
                     await speaker.interrupt()
-                elif data.get("type") == "talk_end":
+                elif data.get("type") == "talk_end" and talking:
+                    # Take and clear the buffer in one step, so a repeated talk_end can't resend it.
                     talking = False
-                    spawn(transcribe_press(bytes(press_audio)))
+                    pcm = bytes(press_audio)
+                    press_audio.clear()
+                    if len(pcm) < MIN_PRESS_BYTES:  # a tap with no speech: don't spend a Prisma call
+                        await ws.send_json({"type": "error", "error": "Didn't catch that. Please say it again."})
+                        await ws.send_json({"type": "turn_done", "spoke": False})
+                    else:
+                        inputs += 1
+                        spawn(transcribe_press(pcm))
                 elif data.get("type") == "set_pcr":
                     try:
                         session.pcr = PCR(**data["pcr"])

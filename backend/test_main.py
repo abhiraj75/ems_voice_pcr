@@ -226,3 +226,9 @@ events = asyncio.run(s.handle_segment("Readback karo"))
 assert [e["source"] for e in events] == ["readback"] and "110 over 70" in events[0]["text"], events
 assert READBACK_REQUEST.search("padh ke sunao") and not READBACK_REQUEST.search("BP 120 over 80")
 print("readback shortcut ok")
+
+# A long quote never triggers the slow fuzzy scan; a short close one still matches.
+from agent import verify_quote
+assert not verify_quote("x" * 500, "y" * 20000)
+assert verify_quote("BP 110 over 70", "medic said bp 110  over 70 just now")
+print("quote guard ok")

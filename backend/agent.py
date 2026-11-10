@@ -46,6 +46,9 @@ def _norm(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w/.%\s]", " ", text.lower())).strip()
 
 
+MAX_FUZZY_QUOTE = 200
+
+
 def verify_quote(quote: str, transcript: str, threshold: float = 0.85) -> bool:
     """True if quote appears in transcript, exactly or as a close fuzzy match (STT/LLM spacing drift)."""
     q, t = _norm(quote), _norm(transcript)
@@ -53,6 +56,8 @@ def verify_quote(quote: str, transcript: str, threshold: float = 0.85) -> bool:
         return False
     if q in t:
         return True
+    if len(q) > MAX_FUZZY_QUOTE:  # fuzzy search is O(transcript x quote); evidence quotes should be short
+        return False
     n = len(q)
     for i in range(max(1, len(t) - n + 1)):
         window = difflib.SequenceMatcher(None, q, t[i:i + n], autojunk=False)
