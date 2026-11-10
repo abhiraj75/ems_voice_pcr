@@ -232,3 +232,11 @@ from agent import verify_quote
 assert not verify_quote("x" * 500, "y" * 20000)
 assert verify_quote("BP 110 over 70", "medic said bp 110  over 70 just now")
 print("quote guard ok")
+
+# Errors never echo an API key back to the client.
+import os
+from main import redact, server_error
+os.environ["GNANI_API_KEY"] = "vach_secret_for_test\n"
+err = server_error(RuntimeError("invalid X-API-Key-ID header: vach_secret_for_test"), "Agent voice")
+assert "vach_secret" not in str(err.detail) and "vach_secret" not in redact("key vach_secret_for_test here")
+print("error redaction ok")

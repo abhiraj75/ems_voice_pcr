@@ -39,11 +39,26 @@ MAX_SESSION_INPUTS = 150  # far above a real run (~25 turns); bounds paid calls 
 active_agent_sessions = 0
 
 
+def redact(text: str) -> str:
+    """Mask API keys: library errors can echo request headers, and these strings reach logs."""
+    for name in ("GNANI_API_KEY", "GROQ_API_KEY"):
+        key = (os.getenv(name) or "").strip()
+        if key:
+            text = text.replace(key, "***")
+    return text
+
+
+def server_error(exc: Exception, what: str) -> HTTPException:
+    """Log the real cause (redacted); send the client a plain message, never the exception text."""
+    logger.warning("%s failed: %s: %s", what, type(exc).__name__, redact(str(exc))[:300])
+    return HTTPException(status_code=500, detail={"error": f"{what} failed. Please try again."})
+
+
 def check(res: httpx.Response, service: str) -> None:
     if res.is_error:
         raise HTTPException(
             status_code=502,
-            detail={"error": f"{service} returned {res.status_code}: {res.text[:500]}"},
+            detail={"error": f"{service} returned {res.status_code}: {redact(res.text[:500])}"},
         )
 
 
@@ -103,7 +118,7 @@ async def transcribe(audio: list[UploadFile] = File(...)) -> dict[str, str]:
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail={"error": str(exc)}) from exc
+        raise server_error(exc, "Transcription") from exc
 
 
 def extract_pcr(transcript: str) -> PCR:
@@ -136,7 +151,7 @@ def extract_pcr(transcript: str) -> PCR:
             detail={"error": str(exc), "raw_output": raw_output},
         ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail={"error": str(exc)}) from exc
+        raise server_error(exc, "Report extraction") from exc
 
 
 @app.post("/api/extract")
@@ -165,7 +180,7 @@ async def readback(pcr: PCR) -> Response:
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail={"error": str(exc)}) from exc
+        raise server_error(exc, "Readback") from exc
 
 
 class Speaker:
@@ -196,7 +211,8 @@ class Speaker:
                 async for pcm in stream:
                     await self.ws.send_bytes(pcm)
         except Exception as exc:
-            await self.ws.send_json({"type": "error", "error": str(exc)})
+            msg = exc.detail.get("error") if isinstance(exc, HTTPException) else server_error(exc, "Agent voice").detail["error"]
+            await self.ws.send_json({"type": "error", "error": msg})
         finally:
             await self.ws.send_json({"type": "speaking", "on": False})
 
@@ -273,7 +289,7 @@ async def agent_ws(ws: WebSocket) -> None:
                 parts = [await prisma_transcript(client, headers, pcm_to_wav(pcm[i:i + PRESS_CHUNK_BYTES]))
                          for i in range(0, len(pcm), PRESS_CHUNK_BYTES)]
         except Exception as exc:
-            logger.warning("press transcription failed: %s", str(exc)[:200])
+            logger.warning("press transcription failed: %s", redact(str(exc))[:200])
             await ws.send_json({"type": "error", "error": "Couldn't transcribe that. Please say it again."})
             await ws.send_json({"type": "turn_done", "spoke": False})
             return
@@ -346,7 +362,7 @@ async def agent_ws(ws: WebSocket) -> None:
         await ws.send_json({"type": "error", "error": exc.detail.get("error", str(exc.detail))})
     except Exception as exc:
         try:
-            await ws.send_json({"type": "error", "error": str(exc)})
+            await ws.send_json({"type": "error", "error": server_error(exc, "Live session").detail["error"]})
         except Exception:
             pass
     finally:
