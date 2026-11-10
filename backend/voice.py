@@ -30,7 +30,7 @@ EMS_TERMS = [
 
 def gnani_headers() -> dict[str, str]:
     load_dotenv()
-    api_key = os.getenv("GNANI_API_KEY")
+    api_key = (os.getenv("GNANI_API_KEY") or "").strip()  # a pasted trailing newline makes the header invalid
     if not api_key:
         raise HTTPException(
             status_code=500,

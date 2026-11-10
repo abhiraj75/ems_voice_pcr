@@ -33,7 +33,7 @@ SCALAR_FIELDS = [f for f in PCR.model_fields if f not in META_FIELDS]
 
 def groq_client() -> Groq:
     load_dotenv()
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = (os.getenv("GROQ_API_KEY") or "").strip()
     if not api_key:
         raise HTTPException(
             status_code=500,
