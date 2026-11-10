@@ -2,7 +2,7 @@
 
 A voice copilot for India's 108 ambulances. The paramedic talks in Hindi or English, and the Patient Care Report (PCR) fills itself. A live agent asks for each detail, reads back what it recorded, and flags safety risks such as a drug the patient is allergic to.
 
-Built for Gnani AI's Great Indian AI Internship Challenge on Gnani **Prisma v3.0** (speech-to-text) and **Timbre v3.0** (text-to-speech).
+Built on Gnani AI's **Prisma v3.0** (speech-to-text) and **Timbre v3.0** (text-to-speech).
 
 > Prototype. Tested only on synthetic patients. The safety checks are illustrative, not clinical guidance.
 
@@ -14,7 +14,7 @@ Paramedics in India spend 30 to 60 minutes on paperwork after a run, usually fro
 
 - **App**: [ems-voice-pcr.vercel.app](https://ems-voice-pcr.vercel.app)
 - **API**: [ems-voice-pcr.onrender.com](https://ems-voice-pcr.onrender.com)
-- **Demo video (v1, Record mode)**: [Google Drive](https://drive.google.com/file/d/14SPFbeeidzZUDXFPWupayFaEAQakvfwg/view?usp=sharing)
+- **Demo video (live agent, in Hindi)**: [Google Drive](https://drive.google.com/file/d/1XA8E2EQvbcwtzX_8U4FckM3M5vdC-80p/view?usp=sharing)
 
 The backend runs on Render's free tier, which sleeps after 15 minutes idle; the first request after that takes about 30 seconds. Use Chrome or Edge and allow the microphone.
 
@@ -166,18 +166,11 @@ Open http://localhost:5173.
 | `CORS_ORIGINS` | backend, optional | Comma-separated allowed origins; defaults to the Vercel app and localhost |
 | `VITE_API_URL` | frontend, optional | Backend URL; defaults to `http://localhost:8000` |
 
-## Not built yet
-
-- Accounts, login and a server-side database (reports live in the browser only)
-- Integration with state or NHA ePCR systems, or NEMSIS field mapping
-- A hospital pre-arrival screen fed by the live agent
-- Languages beyond English and Hindi (the wording table is ready for reviewed additions)
-- Testing with real paramedics and real ambulance noise
-
 ## What's next
 
-1. Hospital pre-arrival screen: the receiving team sees the report fill in during the run (needs a database).
-2. Hosted Postgres with login, encryption and retention rules suited to health data under India's DPDP Act.
-3. Audio-mode eval: synthetic speech mixed with siren noise at several noise levels, scored by word error rate.
-4. Pilot with working 108 paramedics, and a clinician review of the rules and the eval answers.
-5. A paid Groq tier, since the free tier allows only about two agent turns a minute.
+- **Hospital pre-arrival screen**: the receiving team watches the report fill in during the run and prepares before the patient arrives.
+- **Accounts and a database**: login, and hosted storage with encryption and retention rules suited to health data under India's DPDP Act. Today reports live only in the browser.
+- **Automate the rest**: vitals pulled from the monitor, time and location from the 108 dispatch call, and the finished report sent to state or NHA ePCR systems.
+- **OPD mode**: the same agent takes a patient's complaint, history and vitals before they see the doctor.
+- **More languages** beyond English and Hindi; the wording table is ready for reviewed additions.
+- **Real-world testing**: an eval with siren noise mixed into the audio, a pilot with working 108 paramedics, and a clinician review of the rules.

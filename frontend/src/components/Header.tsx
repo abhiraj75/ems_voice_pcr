@@ -44,7 +44,7 @@ export function Header({ mode, onModeChange, onHelp }: HeaderProps) {
             <span className="hidden md:inline">How it works</span>
           </button>
           <a
-            href="https://drive.google.com/file/d/14SPFbeeidzZUDXFPWupayFaEAQakvfwg/view?usp=sharing"
+            href="https://drive.google.com/file/d/1XA8E2EQvbcwtzX_8U4FckM3M5vdC-80p/view?usp=sharing"
             target="_blank"
             rel="noopener noreferrer"
             className={topLink}
