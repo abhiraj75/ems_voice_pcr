@@ -1,6 +1,7 @@
-import { ChevronLeft, ChevronRight, ClipboardList, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useState } from "react";
 import type { SavedPCR } from "../lib/types";
+import { heading } from "../lib/ui";
 
 interface SavedRunsProps {
   runs: SavedPCR[];
@@ -18,33 +19,32 @@ export function SavedRuns({ runs, activeId, onSelect, onDelete }: SavedRunsProps
 
   return (
     <aside
-      className={`hidden border-r border-slate-200 bg-white transition-all duration-200 lg:block ${
+      className={`hidden shrink-0 border-r border-line bg-white transition-all duration-200 lg:block print:hidden ${
         open ? "w-72" : "w-16"
       }`}
     >
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          {open ? (
-            <span className="text-xs font-bold uppercase tracking-normal text-slate-500">
-              Saved PCRs ({runs.length})
-            </span>
-          ) : (
-            <ClipboardList className="h-5 w-5 text-red-600" />
+        {/* px-6 matches the header, so "Saved reports" lines up under "108" */}
+        <div className={`flex items-center border-b border-line py-3 ${open ? "justify-between px-6" : "justify-center"}`}>
+          {open && (
+            <h2 className={heading}>
+              Saved reports ({runs.length})
+            </h2>
           )}
           <button
             type="button"
             aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-            className="rounded-md border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50"
+            className="rounded-md border border-line p-1.5 text-muted hover:bg-cabin"
             onClick={() => setOpen((v) => !v)}
           >
             {open ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
         </div>
         {open && (
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex-1 overflow-y-auto px-3 py-3">
             {runs.length === 0 ? (
-              <p className="px-2 py-4 text-center text-sm text-slate-400">
-                No saved PCRs yet. Record a handoff to get started.
+              <p className="px-3 py-2 text-sm leading-6 text-muted">
+                No saved reports yet. Reports you save show up here.
               </p>
             ) : (
               <div className="space-y-2">
@@ -55,28 +55,28 @@ export function SavedRuns({ runs, activeId, onSelect, onDelete }: SavedRunsProps
                     tabIndex={0}
                     onClick={() => onSelect(run)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect(run); }}
-                    className={`w-full cursor-pointer rounded-md border px-3 py-2 text-left transition hover:bg-slate-50 ${
+                    className={`w-full cursor-pointer rounded-md border px-3 py-2 text-left transition hover:bg-cabin ${
                       activeId === run.id
-                        ? "border-red-300 bg-red-50"
-                        : "border-slate-200"
+                        ? "border-ink bg-cabin"
+                        : "border-line"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-800">
+                        <p className="text-[15px] font-bold text-ink">
                           {run.pcr.chief_complaint || "Unknown complaint"}
                         </p>
-                        <p className="mt-0.5 text-xs text-slate-500">
+                        <p className="mt-0.5 text-sm text-muted">
                           {run.pcr.patient_age ? `${run.pcr.patient_age}${run.pcr.patient_gender === "male" ? "M" : run.pcr.patient_gender === "female" ? "F" : ""}` : "Age unknown"}
-                          {" · "}
+                          {", "}
                           {formatTime(run.savedAt)}
                         </p>
                       </div>
                       <button
                         type="button"
-                        aria-label="Delete PCR"
+                        aria-label="Delete report"
                         onClick={(e) => { e.stopPropagation(); onDelete(run.id); }}
-                        className="shrink-0 rounded p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        className="shrink-0 rounded p-0.5 text-muted hover:bg-red-50 hover:text-red-600"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>

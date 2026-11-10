@@ -46,6 +46,18 @@ export interface PCR {
   // Meta
   confidence_notes: string | null;
   additional_notes: string | null;
+
+  // Provenance: field (or "medications.<i>") -> verbatim transcript quote; fields set without a verified quote.
+  evidence?: Record<string, string>;
+  unsupported?: string[];
+}
+
+export interface Issue {
+  id: string;
+  severity: "critical" | "warning" | "gap";
+  field: string;
+  message: string;
+  say: string;
 }
 
 export type RecorderState =

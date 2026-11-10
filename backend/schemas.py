@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -47,6 +47,10 @@ class PCR(BaseModel):
     # Meta
     confidence_notes: Optional[str] = None
     additional_notes: Optional[str] = None
+
+    # Provenance: field -> verbatim transcript quote; fields set without a verified quote.
+    evidence: Dict[str, str] = Field(default_factory=dict)
+    unsupported: List[str] = Field(default_factory=list)
 
 
 class TranscriptRequest(BaseModel):

@@ -1,6 +1,7 @@
-import { ClipboardPaste, Mic, Play, RefreshCcw, Sparkles, Square } from "lucide-react";
+import { ClipboardPaste, Loader2, Mic, RefreshCcw, Sparkles, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { RecorderState } from "../lib/types";
+import { bar, barIcon, heading, panel, secondary } from "../lib/ui";
 
 interface RecorderProps {
   state: RecorderState;
@@ -97,155 +98,117 @@ export function Recorder({ state, transcript, error, onAudioReady, onTranscriptR
     onTranscriptReady(EXAMPLE_TRANSCRIPT);
   };
 
+
   const busy = state === "transcribing" || state === "extracting";
 
   return (
-    <section className="space-y-5">
-      <div className="rounded-md border border-slate-200 bg-white p-5">
-        <div className="flex flex-col items-center py-5 text-center">
-          {state === "idle" && !pasteMode && (
-            <>
-              <button
-                type="button"
-                onClick={startRecording}
-                className="flex h-28 w-28 items-center justify-center rounded-full bg-red-600 text-white transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-100"
-                aria-label="Start recording"
-              >
-                <Mic className="h-10 w-10" />
+    <section className="space-y-4">
+      <div className={panel}>
+        {state === "idle" && !pasteMode && (
+          <>
+            <button type="button" onClick={startRecording} className={`${bar} bg-signal hover:bg-signal-dark`}>
+              <span className={barIcon}>
+                <Mic className="h-7 w-7" />
+              </span>
+              <span>
+                <span className="block font-display text-2xl font-bold leading-tight">Record handoff</span>
+                <span className="mt-0.5 block text-sm text-white/85">Tap, speak in Hindi or English, then tap again to stop.</span>
+              </span>
+            </button>
+            <div className="mt-3 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
+              <button type="button" onClick={() => setPasteMode(true)} className={`${secondary} justify-center`}>
+                <ClipboardPaste className="h-4 w-4" />
+                Paste transcript
               </button>
-              <p className="mt-4 text-base font-semibold text-slate-900">Tap to record patient handoff</p>
-              <p className="mt-1 text-sm text-slate-500">Speak naturally in Hinglish or English.</p>
-
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setPasteMode(true)}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  <ClipboardPaste className="h-3.5 w-3.5" />
-                  Paste transcript
-                </button>
-                <button
-                  type="button"
-                  onClick={handleTryExample}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Try an example
-                </button>
-                <a
-                  href="https://drive.google.com/file/d/14SPFbeeidzZUDXFPWupayFaEAQakvfwg/view?usp=sharing"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                  Watch demo
-                </a>
-              </div>
-            </>
-          )}
-
-          {state === "idle" && pasteMode && (
-            <div className="w-full text-left">
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-normal text-slate-500">Paste transcript</span>
-                <textarea
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-red-600 focus:ring-2 focus:ring-red-100 min-h-32 resize-y"
-                  placeholder="Paste a paramedic voice transcript here..."
-                  value={pasteText}
-                  onChange={(e) => setPasteText(e.target.value)}
-                  autoFocus
-                />
-              </label>
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handlePasteSubmit}
-                  disabled={!pasteText.trim()}
-                  className="rounded-md bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-100 disabled:opacity-40"
-                >
-                  Extract PCR
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setPasteMode(false); setPasteText(""); }}
-                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-              </div>
+              <button type="button" onClick={handleTryExample} className={`${secondary} justify-center`}>
+                <Sparkles className="h-4 w-4" />
+                Try an example
+              </button>
             </div>
-          )}
+          </>
+        )}
 
-          {state === "recording" && (
-            <>
+        {state === "idle" && pasteMode && (
+          <div>
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-bold text-muted">Paste a transcript</span>
+              <textarea
+                className="min-h-32 w-full resize-y rounded-md border border-line bg-white px-3 py-2 text-[15px] text-ink outline-none transition placeholder:text-muted/70 focus:border-ink focus:ring-2 focus:ring-ink/15"
+                placeholder="Paste what the paramedic said..."
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                autoFocus
+              />
+            </label>
+            <div className="mt-3 flex items-center gap-2">
               <button
                 type="button"
-                onClick={stopRecording}
-                className="flex h-28 w-28 animate-pulse items-center justify-center rounded-md bg-red-600 text-white transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-100"
-                aria-label="Stop recording"
+                onClick={handlePasteSubmit}
+                disabled={!pasteText.trim()}
+                className="rounded-md bg-signal px-4 py-2 text-sm font-bold text-white hover:bg-signal-dark focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-signal/30 disabled:opacity-40"
               >
-                <Square className="h-9 w-9 fill-current" />
+                Fill report
               </button>
-              <p className="mt-4 font-mono text-4xl font-bold text-slate-950">{formatSeconds(seconds)}</p>
-              <div className="mt-4 flex h-8 items-center gap-2">
-                <span className="h-3 w-3 animate-bounce rounded-full bg-red-500 [animation-delay:-0.2s]" />
-                <span className="h-3 w-3 animate-bounce rounded-full bg-red-500 [animation-delay:-0.1s]" />
-                <span className="h-3 w-3 animate-bounce rounded-full bg-red-500" />
-              </div>
-            </>
-          )}
-
-          {busy && (
-            <>
-              <div className="h-16 w-16 animate-spin rounded-full border-4 border-slate-200 border-t-red-600" />
-              <p className="mt-4 text-base font-semibold text-slate-900">
-                {state === "transcribing" ? "Transcribing..." : "Extracting PCR fields..."}
-              </p>
-              <p className="mt-1 text-sm text-slate-500">This is the magic bit. Give it a moment.</p>
-              <button
-                type="button"
-                onClick={onReset}
-                className="mt-4 inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
+              <button type="button" onClick={() => { setPasteMode(false); setPasteText(""); }} className={secondary}>
                 Cancel
               </button>
-            </>
-          )}
+            </div>
+          </div>
+        )}
 
-          {state === "ready" && (
-            <>
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-green-200 bg-green-50 text-green-700">
-                <Mic className="h-7 w-7" />
-              </div>
-              <p className="mt-4 text-base font-semibold text-slate-900">Transcript ready</p>
-              <button
-                type="button"
-                onClick={onReset}
-                className="mt-4 inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <RefreshCcw className="h-4 w-4" />
-                Record again
-              </button>
-            </>
-          )}
-        </div>
+        {state === "recording" && (
+          <button type="button" onClick={stopRecording} className={`${bar} bg-ink hover:bg-ink/90`}>
+            <span className={barIcon}>
+              <Square className="h-6 w-6 fill-current" />
+            </span>
+            <span className="flex-1">
+              <span className="block font-display text-2xl font-bold leading-tight">Stop recording</span>
+              <span className="mt-0.5 flex items-center gap-1.5 text-sm text-white/85">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-signal motion-reduce:animate-none" />
+                Listening
+              </span>
+            </span>
+            <span className="font-display text-4xl font-semibold tabular-nums">{formatSeconds(seconds)}</span>
+          </button>
+        )}
+
+        {busy && (
+          <div className="flex items-center gap-4 rounded-xl bg-cabin px-5 py-6">
+            <Loader2 className="h-8 w-8 shrink-0 animate-spin text-ink" />
+            <div className="flex-1">
+              <p className="font-display text-2xl font-bold leading-tight">
+                {state === "transcribing" ? "Transcribing..." : "Filling the report..."}
+              </p>
+              <p className="mt-0.5 text-sm text-muted">Usually takes a few seconds.</p>
+            </div>
+            <button type="button" onClick={onReset} className={secondary}>
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {state === "ready" && (
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-cabin px-5 py-4">
+            <p className="font-display text-xl font-bold">Transcript ready</p>
+            <button type="button" onClick={onReset} className={secondary}>
+              <RefreshCcw className="h-4 w-4" />
+              Record again
+            </button>
+          </div>
+        )}
 
         {(localError || error) && (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <div role="alert" className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
             {localError || error}
           </div>
         )}
       </div>
 
       {transcript && (
-        <div className="rounded-md border border-slate-200 bg-white p-4">
-          <h2 className="text-sm font-bold uppercase tracking-normal text-slate-500">Transcript</h2>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-800">{transcript}</p>
-          {audioUrl && (
-            <audio controls src={audioUrl} className="mt-3 w-full h-8" />
-          )}
+        <div className={panel}>
+          <h2 className={heading}>Transcript</h2>
+          <p className="mt-2 whitespace-pre-wrap text-[15px] leading-7 text-ink">{transcript}</p>
+          {audioUrl && <audio controls src={audioUrl} className="mt-3 h-8 w-full" />}
         </div>
       )}
     </section>

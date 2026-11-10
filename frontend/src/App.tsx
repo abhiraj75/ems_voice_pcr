@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { Header } from "./components/Header";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AgentPanel } from "./components/AgentPanel";
+import { Header, type Mode } from "./components/Header";
+import { ModeChooser } from "./components/ModeChooser";
 import { PCRForm } from "./components/PCRForm";
 import { Recorder } from "./components/Recorder";
 import { SavedRuns } from "./components/SavedRuns";
+import type { AgentClient } from "./lib/agent";
 import { extractPCR, transcribeAudio } from "./lib/api";
 import { emptyPCR, readbackKey, type PCR, type RecorderState, type SavedPCR } from "./lib/types";
 
@@ -25,6 +28,19 @@ export default function App() {
   const [confirmedKey, setConfirmedKey] = useState<string | null>(null);
   const vitalsConfirmed = confirmedKey === readbackKey(pcr);
   const genRef = useRef(0);
+  const [mode, setMode] = useState<Mode>("record");
+  // The chooser opens on a first visit and again from "How it works".
+  const [chooserOpen, setChooserOpen] = useState(() => {
+    try { return !localStorage.getItem("ems_seen_chooser"); } catch { return true; }
+  });
+  const closeChooser = () => {
+    setChooserOpen(false);
+    try { localStorage.setItem("ems_seen_chooser", "1"); } catch { /* private window: show it again next time */ }
+  };
+  const agentRef = useRef<AgentClient | null>(null);
+  // Fields the live agent just changed (flash green) and the evidence quote being hovered.
+  const [flash, setFlash] = useState<Set<string>>(new Set());
+  const [highlight, setHighlight] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem("ems_saved_pcrs", JSON.stringify(savedRuns));
@@ -32,6 +48,7 @@ export default function App() {
 
   const reset = () => {
     genRef.current += 1;
+    agentRef.current?.close();
     setState("idle");
     setTranscript("");
     setPcr(emptyPCR());
@@ -85,6 +102,34 @@ export default function App() {
     }
   };
 
+  const handleAgentStart = () => {
+    genRef.current += 1;
+    setPcr(emptyPCR());
+    setTranscript("");
+    setError(null);
+    setToast(null);
+    setViewingId(null);
+    setExtractionMs(null);
+    setConfirmedKey(null);
+    setState("ready");
+  };
+
+  const handleAgentPcr = useCallback((next: PCR) => {
+    setPcr((prev) => {
+      const changed = (Object.keys(next) as (keyof PCR)[]).filter(
+        (key) => key !== "evidence" && key !== "unsupported" && JSON.stringify(prev[key]) !== JSON.stringify(next[key]),
+      );
+      setFlash(new Set(changed));
+      return next;
+    });
+    window.setTimeout(() => setFlash(new Set()), 1500);
+  }, []);
+
+  const handlePcrChange = (next: PCR) => {
+    setPcr(next);
+    agentRef.current?.setPcr(next);
+  };
+
   const handleLooksGood = () => {
     if (viewingId) {
       // Update existing saved run
@@ -93,7 +138,7 @@ export default function App() {
           run.id === viewingId ? { ...run, pcr: { ...pcr }, transcript, vitalsConfirmed } : run
         )
       );
-      setToast("PCR updated");
+      setToast("Report updated");
     } else {
       // Save new run
       const saved: SavedPCR = {
@@ -104,7 +149,7 @@ export default function App() {
         vitalsConfirmed,
       };
       setSavedRuns((prev) => [saved, ...prev]);
-      setToast("PCR saved");
+      setToast("Report saved");
     }
     window.setTimeout(reset, 1100);
   };
@@ -124,41 +169,70 @@ export default function App() {
     if (viewingId === id) reset();
   };
 
+  const switchMode = (next: Mode) => {
+    if (next === mode) return;
+    reset();
+    setMode(next);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Header />
-      <div className="flex min-h-[calc(100vh-57px)]">
+    <div className="min-h-screen bg-cabin text-ink print:bg-white">
+      <Header mode={mode} onModeChange={switchMode} onHelp={() => setChooserOpen(true)} />
+      <ModeChooser
+        open={chooserOpen}
+        onChoose={(next) => {
+          switchMode(next);
+          closeChooser();
+        }}
+        onClose={closeChooser}
+      />
+      <div className="flex min-h-[calc(100vh-53px)]">
         <SavedRuns runs={savedRuns} activeId={viewingId} onSelect={handleSelectRun} onDelete={handleDeleteRun} />
-        <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6">
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)]">
-            <Recorder
-              state={state}
-              transcript={transcript}
-              error={error}
-              onAudioReady={handleAudioReady}
-              onTranscriptReady={handleTranscriptReady}
-              onRecordingStart={() => setState("recording")}
-              onReset={reset}
-            />
+        <main className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 print:p-0">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] print:block">
+            <div className="print:hidden">
+              {mode === "record" ? (
+                <Recorder
+                  state={state}
+                  transcript={transcript}
+                  error={error}
+                  onAudioReady={handleAudioReady}
+                  onTranscriptReady={handleTranscriptReady}
+                  onRecordingStart={() => setState("recording")}
+                  onReset={reset}
+                />
+              ) : (
+                <AgentPanel
+                  agentRef={agentRef}
+                  highlight={highlight}
+                  notes={pcr.additional_notes}
+                  onStart={handleAgentStart}
+                  onPcr={handleAgentPcr}
+                  onTranscript={setTranscript}
+                />
+              )}
+            </div>
 
             {state === "ready" ? (
               <PCRForm
                 pcr={pcr}
-                onChange={setPcr}
+                onChange={handlePcrChange}
                 onLooksGood={handleLooksGood}
                 isEditing={viewingId !== null}
                 extractionMs={extractionMs}
                 vitalsConfirmed={vitalsConfirmed}
                 onConfirmVitals={() => setConfirmedKey(readbackKey(pcr))}
+                flash={flash}
+                onEvidenceHover={setHighlight}
               />
             ) : state === "transcribing" || state === "extracting" ? (
-              <section className="rounded-md border border-slate-200 bg-white p-5 animate-pulse">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+              <section className="animate-pulse rounded-xl border border-line bg-white p-5 motion-reduce:animate-none sm:p-6" aria-label="Filling the report">
+                <div className="flex items-center justify-between border-b border-line pb-4">
                   <div>
-                    <div className="h-6 w-48 rounded bg-slate-200" />
-                    <div className="mt-2 h-4 w-64 rounded bg-slate-100" />
+                    <div className="h-7 w-56 rounded bg-line" />
+                    <div className="mt-2 h-4 w-64 rounded bg-cabin" />
                   </div>
-                  <div className="h-9 w-24 rounded-md bg-slate-200" />
+                  <div className="h-10 w-28 rounded-md bg-line" />
                 </div>
                 <div className="mt-5 space-y-6">
                   {([
@@ -169,12 +243,12 @@ export default function App() {
                     { cols: 2, cls: "sm:grid-cols-2" },
                   ]).map(({ cols, cls }, sectionIndex) => (
                     <div key={sectionIndex}>
-                      <div className="mb-3 h-4 w-20 rounded bg-slate-200" />
+                      <div className="mb-3 h-5 w-24 rounded bg-line" />
                       <div className={`grid gap-4 ${cls}`}>
                         {Array.from({ length: cols }).map((_, i) => (
                           <div key={i}>
-                            <div className="mb-1 h-3 w-12 rounded bg-slate-100" />
-                            <div className="h-10 rounded-md bg-slate-100" />
+                            <div className="mb-1.5 h-3.5 w-14 rounded bg-cabin" />
+                            <div className="h-10 rounded-md bg-cabin" />
                           </div>
                         ))}
                       </div>
@@ -183,11 +257,13 @@ export default function App() {
                 </div>
               </section>
             ) : (
-              <section className="flex min-h-[520px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white p-6 text-center">
+              <section className="flex min-h-[520px] items-center justify-center rounded-xl border-2 border-dashed border-line p-6 text-center">
                 <div className="max-w-sm">
-                  <p className="text-lg font-extrabold text-slate-950">PCR fields will appear here</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Record a patient handoff to auto-fill the editable clinical report.
+                  <p className="font-display text-2xl font-bold text-ink">No report yet</p>
+                  <p className="mt-2 text-[15px] leading-6 text-muted">
+                    {mode === "record"
+                      ? "Record a handoff and the report fills in here for you to check."
+                      : "Start the live agent. The report fills in here as you answer its questions."}
                   </p>
                 </div>
               </section>
@@ -197,7 +273,7 @@ export default function App() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-5 right-5 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-800 shadow-sm">
+        <div role="status" className="print:hidden fixed bottom-5 right-5 rounded-lg bg-ink px-4 py-3 text-sm font-bold text-white">
           {toast}
         </div>
       )}

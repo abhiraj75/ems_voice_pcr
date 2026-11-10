@@ -1,6 +1,6 @@
 import type { PCR } from "./types";
 
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+export const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // The backend sleeps after inactivity and can take ~30s to cold start. 
 const REQUEST_TIMEOUT_MS = 60_000;

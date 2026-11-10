@@ -1,73 +1,133 @@
-# 108 EMS - Voice PCR
+# 108 Voice PCR
 
-## The Problem
+A voice copilot for India's 108 ambulances. The paramedic talks in Hindi or English, and the Patient Care Report (PCR) fills itself. A live agent asks for each detail, reads back what it recorded, and flags safety risks such as a drug the patient is allergic to.
 
-Indian paramedics spend 30-60 minutes on paperwork after ambulance runs, often after the actual care moment has already passed. Voice-first PCR drafting can turn spoken handoffs into structured clinical data while the details are still fresh.
+Built for Gnani AI's Great Indian AI Internship Challenge on Gnani **Prisma v3.0** (speech-to-text) and **Timbre v3.0** (text-to-speech).
 
-## The Bet
+> Prototype. Tested only on synthetic patients. The safety checks are illustrative, not clinical guidance.
 
-Can an LLM extract clinical data from code-switched Hinglish well enough to save 25+ minutes of paperwork?
+## The problem
 
-## Live Demo
+Paramedics in India spend 30 to 60 minutes on paperwork after a run, usually from memory once the patient has been handed over. Details get lost, and the report is written when it is least useful. If the report could be filled by voice during the run, it would be more complete, it would be ready at handover, and it could catch mistakes while they can still be fixed.
 
-- **Video**: [Watch Demo](https://drive.google.com/file/d/14SPFbeeidzZUDXFPWupayFaEAQakvfwg/view?usp=sharing)
-- **Frontend**: [ems-voice-pcr.vercel.app](https://ems-voice-pcr.vercel.app)
-- **Backend**: [ems-voice-pcr.onrender.com](https://ems-voice-pcr.onrender.com)
+## Try it
 
-> Note: Render free tier sleeps after 15 min of inactivity. First request after idle takes ~30s to cold start.
+- **App**: [ems-voice-pcr.vercel.app](https://ems-voice-pcr.vercel.app)
+- **API**: [ems-voice-pcr.onrender.com](https://ems-voice-pcr.onrender.com)
+- **Demo video (v1, Record mode)**: [Google Drive](https://drive.google.com/file/d/14SPFbeeidzZUDXFPWupayFaEAQakvfwg/view?usp=sharing)
 
-## What's Built
+The backend runs on Render's free tier, which sleeps after 15 minutes idle; the first request after that takes about 30 seconds. Use Chrome or Edge and allow the microphone.
 
-### Core Pipeline
-- Voice recording via browser MediaRecorder, converted in-browser to 16 kHz mono WAV in 30s chunks
-- Transcription via Gnani **Prisma v2.5** (`en-IN` Hinglish, number normalization, EMS drug-name biasing)
-- Structured extraction via Groq GPT-OSS 120B JSON mode
-- Editable Patient Care Report form with 26 clinical fields
-- Vitals and medications read back aloud via Gnani **Timbre v3.0**; the medic taps Confirm after listening, and any later edit voids the confirmation
+## Two ways to fill a report
 
-### PCR Schema (26 fields across 6 sections)
+A chooser on first visit explains both. Switch any time from the top bar.
+
+### Live agent
+
+A two-way voice conversation. The agent leads the interview, so the medic never has to remember what's missing.
+
+1. It greets the medic and asks which language to use. English and everyday spoken Hindi (Roman script, with the English terms medics actually use) are supported; other languages are named and politely declined.
+2. It asks one bundled question at a time, only for what is still empty:
+   patient (name, age, gender), what happened and where, vitals (BP, pulse, SpO2, GCS), allergies, history, treatment given, destination and consent, and finally "anything else?".
+   An unanswered question is asked at most three times. The handover question is skipped if the patient refused transport or is deceased.
+3. After every answer it reads back exactly what it wrote ("Noted: B P 110 over 70, pulse 118"), built from the form, not from model text.
+4. When the questions are done it names any open gaps, then offers a readback.
+
+The medic can also talk to it:
+
+| Medic says | Agent does |
+|---|---|
+| Answers out of order or gives many details at once | Records all of them |
+| "BP 350 over 90" (impossible value) | Doesn't record it; says what it heard and asks again |
+| "Aspirin galti se likha, hata do" | Removes the medication |
+| "SpO2 nahi liya, skip karo" | Moves on; the gap is named at the end |
+| "SpO2 kitna likha hai?" / "kya bacha hai?" | Answers from the report |
+| "GCS kya hota hai?" | Explains the term in one sentence |
+| "Mujhe kaunsi dawai deni chahiye?" | Refuses; follow protocol or medical control |
+| Something unrelated | Says it can only help with this report |
+| "Readback karo" | Reads vitals and medications back, answered instantly without an LLM call |
+| Details that fit no field ("helmet nahi pehna tha") | Saves them under **Other details**, shown in its own card |
+
+**Push-to-talk.** Hold the bar to talk and release to send, or tap once to start and tap again to send. Audio leaves the browser only while talking, so background noise and the agent's own voice never reach speech recognition. Pressing while the agent speaks cuts it off. A text box is there for scenes too noisy to speak in.
+
+### Record mode
+
+Speak the whole handoff in one go. The audio is transcribed by Prisma v3.0 and turned into a structured report by one LLM call, usually in about 2 seconds. The medic checks the form, can hear vitals and medications read back by Timbre v3.0, and confirms them. You can also paste a transcript or try a built-in Hinglish example.
+
+## Safety checks
+
+Deterministic rules in [`backend/rules.py`](backend/rules.py) run on the form after every change. The model never writes alert text: critical alerts are spoken once from fixed templates, so they always match what is recorded.
+
+| Severity | Check | How it's shown |
+|---|---|---|
+| Critical | Medication clashes with a recorded allergy (penicillins, NSAIDs/aspirin, sulfa, or the named drug) | Spoken and shown |
+| Critical | GCS 8 or below with no airway management recorded | Spoken and shown |
+| Critical | Implausible vital, almost certainly a mishearing (e.g. pulse 900, BP 350/90, SpO2 above 100) | Spoken and shown |
+| Warning | Shock index (pulse / systolic BP) above 1 | Shown |
+| Warning | SpO2 below 94 with no oxygen recorded | Shown |
+| Warning | Dose outside the usual single-dose range (aspirin, tramadol, ondansetron, diazepam, adrenaline) | Shown |
+| Gap | BP, pulse, SpO2 or GCS missing; consent missing when transporting | Shown, and named at the end |
+
+## Every value is traceable
+
+Each field the agent sets carries the exact words it came from, checked against the transcript (exact match, or a fuzzy match of 0.85 or better). Hover a field to highlight those words in the conversation. A value whose quote can't be found gets a red **no source** badge. Editing a field by hand clears its evidence and syncs the change back to the agent.
+
+## The report
+
+26 fields in six sections, all editable:
+
 - **Patient**: name, age, gender
 - **Incident**: chief complaint, history, location, scene type, allergies
-- **Vitals**: HR, RR, BP, SpO2, GCS, temperature, skin, pain scale
-- **Treatment**: airway, IV, oxygen administered, medications (name/dose/route)
+- **Vitals**: HR, RR, BP, SpO2, GCS, temperature, skin, pain score
+- **Treatment**: airway, IV, oxygen, medications (name, dose, route)
 - **Disposition**: transport decision, destination, consent, caregiver present
-- **Meta**: AI confidence notes, additional notes
+- **Other details**, plus any uncertainty the model flagged
 
-### Features
-- Amber uncertainty banner when the AI flags something it's unsure about
-- Amber left-border highlight on null/unfilled fields
-- Audio playback after recording to verify what was said
-- Paste transcript mode for text input without recording
-- Try an example button with a pre-loaded Hinglish handoff
-- Loading skeleton during extraction
-- Extraction timing badge showing speed (e.g. 1.8s)
-- Cancel button that safely discards in-flight API results
-- Export PCR as JSON download
-- Saved PCRs sidebar with select, update, and delete
-- localStorage persistence across page refreshes
-- Mobile responsive layout
+Empty fields are marked in amber. Reports can be saved (they stay in the browser's local storage, across refreshes), reopened from the sidebar, updated, deleted, exported as JSON, or printed / saved as a one-page PDF for handover.
 
-## What's Not Built (Prototype Scope)
+## Evaluation
 
-- No authentication or user accounts
-- No database backend (localStorage only)
-- No PDF export
-- No NEMSIS/ePCR gateway integration
-- No multi-language selector (Hinglish only)
+[`backend/eval`](backend/eval) replays 12 synthetic Hinglish handoffs through both modes and scores every field. The cases cover chest pain, trauma with an allergy clash, stroke, a paediatric seizure, cardiac arrest, asthma, hypoglycaemia and an overdose, plus a mid-sentence BP correction, numbers spoken in Hindi, a refused transport, and a sparse handoff that tempts the model to invent values.
 
-## What's Next
+| Mode | Field accuracy | Wrong / missed / invented | Expected critical alerts raised | Evidence verified |
+|---|---|---|---|---|
+| Record (single-shot) | 128/132 (97%) | 2 / 2 / 0 | 4/4 | n/a |
+| Live agent (segment by segment) | 123/134 (92%) | 0 / 10 / 1 | 4/4 | 94/97 |
 
-- Store PCR drafts in a real database (Supabase/PostgreSQL)
-- Map fields to NEMSIS-compatible ePCR schemas
-- Test with real paramedics and noisy ambulance audio
-- Integrate with NHA or state ePCR gateway workflows
-- PDF generation for hospital handoff
+Measured on 23 Oct 2026, before the latest agent changes (history and closing questions, readback shortcut). Six of the agent's ten misses were transport decision or caregiver, which it doesn't ask about; its one invented value was an SpO2. Re-run with `python -m eval.run`.
+
+## How it works
+
+```
+Browser                                  FastAPI                                  Services
+mic ─ 16 kHz PCM while held ─ WebSocket ▶ /ws/agent
+                                          on release: whole press as WAV ───────▶ Gnani Prisma v3.0
+                                          AgentSession.handle_segment(text)
+                                            ├─ one tool call per turn ───────────▶ Groq gpt-oss-120b
+                                            ├─ validate against the PCR schema
+                                            ├─ verify evidence quotes
+                                            ├─ rules.check(pcr)
+                                            └─ next question (fixed wording)
+◀── events: transcript, pcr, issues, agent text
+◀── 24 kHz speech ─────────────────────── one utterance per turn ───────────────▶ Gnani Timbre v3.0
+```
+
+- **Tools**: `update_fields` (fields and medications in one call), `remove_medication`, `mark_answered`, `say`, `readback`, `finish`, `nothing_to_record`. A tool call that fails validation is returned to the model and nothing is written.
+- **Fixed wording for anything safety-relevant**: questions, "Noted" confirmations, alerts and readback are built from the form. The model only records data and handles side questions. All spoken wording lives in [`backend/languages.py`](backend/languages.py).
+- **Rate limits**: one LLM call per turn, segments that arrive mid-turn are merged, Groq's retry hints are honoured, and if the 120B model's daily token cap is spent the agent falls back to `gpt-oss-20b`.
+- **Guardrails**: 14-minute session cap (under Gnani's 15-minute limit), at most 3 concurrent sessions, WebSocket origin check, CORS allowlist.
+- **Privacy**: spoken words and transcripts are never logged. Audio goes to Gnani and text to Groq for processing; saved reports stay in the browser.
 
 ## Stack
 
-React 19 + TypeScript + Tailwind CSS frontend, FastAPI backend, Gnani Prisma v2.5 (STT) + Timbre v3.0 (TTS), Groq GPT-OSS 120B (extraction).
+- **Frontend**: React 19, TypeScript, Tailwind CSS, Vite. Mic capture with an inline AudioWorklet; no extra audio libraries.
+- **Backend**: FastAPI (REST and WebSocket), Pydantic, httpx, websockets.
+- **Speech**: Gnani Prisma v3.0 batch STT (`en-IN`, EMS key terms, topic hint); Gnani Timbre v3.0 REST and realtime TTS (voice Lakshmi, `hi-en` and `en-IN`).
+- **LLM**: Groq `openai/gpt-oss-120b` for extraction and the agent, `gpt-oss-20b` as fallback.
 
-## Run Locally
+## Run locally
+
+Requirements: Python 3.11+, Node 20+, a Gnani API key and a Groq API key.
 
 Backend:
 
@@ -76,10 +136,16 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
-# Add GNANI_API_KEY (Prisma + Timbre) and GROQ_API_KEY (extraction) to backend/.env
-python test_main.py
+cp .env.example .env       # add GNANI_API_KEY and GROQ_API_KEY
+python test_main.py        # offline self-checks
 uvicorn main:app --reload --port 8000
+```
+
+Optional:
+
+```bash
+python -m agent            # talk to the agent by typing, no audio
+python -m eval.run         # score both modes on eval/cases.jsonl (uses Groq tokens)
 ```
 
 Frontend:
@@ -90,4 +156,27 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`.
+Open http://localhost:5173.
+
+| Variable | Where | Purpose |
+|---|---|---|
+| `GNANI_API_KEY` | backend | Prisma STT and Timbre TTS |
+| `GROQ_API_KEY` | backend | Extraction and the agent |
+| `CORS_ORIGINS` | backend, optional | Comma-separated allowed origins; defaults to the Vercel app and localhost |
+| `VITE_API_URL` | frontend, optional | Backend URL; defaults to `http://localhost:8000` |
+
+## Not built yet
+
+- Accounts, login and a server-side database (reports live in the browser only)
+- Integration with state or NHA ePCR systems, or NEMSIS field mapping
+- A hospital pre-arrival screen fed by the live agent
+- Languages beyond English and Hindi (the wording table is ready for reviewed additions)
+- Testing with real paramedics and real ambulance noise
+
+## What's next
+
+1. Hospital pre-arrival screen: the receiving team sees the report fill in during the run (needs a database).
+2. Hosted Postgres with login, encryption and retention rules suited to health data under India's DPDP Act.
+3. Audio-mode eval: synthetic speech mixed with siren noise at several noise levels, scored by word error rate.
+4. Pilot with working 108 paramedics, and a clinician review of the rules and the eval answers.
+5. A paid Groq tier, since the free tier allows only about two agent turns a minute.
