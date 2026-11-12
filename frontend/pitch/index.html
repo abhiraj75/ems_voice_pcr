@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>108 Voice PCR pitch</title>
+    <meta name="description" content="A voice copilot that fills the ambulance patient report while the paramedic talks, in Hindi or English." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/index.css" />
+    <!-- Tailwind sizes are in rem, so a smaller root font scales the whole page to fit one printed A4 page. -->
+    <style>@media print { html { font-size: 13px; } html, body { min-height: 0 !important; background: #fff !important; } }</style>
+  </head>
+  <body class="bg-cabin text-ink print:bg-white">
+    <main class="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-10 print:max-w-none print:p-0">
+      <header class="flex items-center justify-between gap-3">
+        <a href="/" class="flex items-center gap-2 font-display text-lg font-bold text-ink">
+          <span class="rounded bg-signal px-1.5 leading-7 text-white">108</span>
+          <span>Voice PCR</span>
+        </a>
+        <a href="/" class="rounded-md bg-ink px-3 py-2 text-sm font-bold text-white hover:bg-ink/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30 print:hidden">Open the app</a>
+      </header>
+
+      <h1 class="mt-6 font-display text-4xl font-bold leading-tight sm:text-5xl print:mt-4 print:text-4xl">The patient report, filled in while the paramedic talks.</h1>
+      <p class="mt-3 max-w-2xl text-lg leading-relaxed text-muted print:mt-2 print:text-base">
+        A voice copilot for India's 108 ambulances. The paramedic speaks in Hindi or English, a live agent asks for each detail and fills the report, and fixed safety rules flag risks while there is still time to act.
+      </p>
+
+      <section class="mt-6 grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] print:mt-4 print:grid-cols-[1fr_1.1fr] print:gap-4">
+        <div>
+          <h2 class="font-display text-xl font-bold">The problem</h2>
+          <p class="mt-1.5 leading-relaxed">
+            108 paramedics write the patient report by hand, usually after the run and from memory. Details get lost, the report isn't ready at handover, and mistakes are found when it's too late to fix them.
+          </p>
+          <h2 class="mt-4 font-display text-xl font-bold">How it works</h2>
+          <ol class="mt-1.5 space-y-1.5 leading-relaxed">
+            <li><b>It asks.</b> One question at a time, only for what's still empty: patient, incident, vitals, allergies, history, treatment, handover.</li>
+            <li><b>It writes and reads back.</b> Every answer fills the form, and the agent repeats exactly what it recorded.</li>
+            <li><b>It checks.</b> After every change, rules catch allergy clashes, GCS 8 or below with no airway, shock index, low SpO2 and impossible vitals.</li>
+          </ol>
+        </div>
+
+        <figure class="rounded-lg border border-line bg-white p-4 print:p-3">
+          <figcaption class="text-sm font-bold text-muted">From the demo, spoken in Hindi</figcaption>
+          <div class="mt-3 space-y-2 text-[15px] leading-snug print:text-sm">
+            <p class="ml-auto w-fit max-w-[85%] rounded-lg bg-cabin px-3 py-2">Penicillin se allergy hai.</p>
+            <p class="w-fit max-w-[85%] rounded-lg bg-voice-soft px-3 py-2 text-voice">Noted: allergies penicillin.</p>
+            <p class="ml-auto w-fit max-w-[85%] rounded-lg bg-cabin px-3 py-2">Amoxicillin 500 milligram oral diya, oxygen 6 litre mask lagaya.</p>
+            <p class="w-fit max-w-[85%] rounded-lg border-l-4 border-signal bg-red-50 px-3 py-2 text-red-900"><b>Alert.</b> Allergy recorded: penicillin, but amoxicillin was given. Please check.</p>
+          </div>
+          <p class="mt-3 text-sm leading-relaxed text-muted">Amoxicillin is a penicillin. The alert comes from a fixed rule, not the AI, so it always matches what's on the report.</p>
+        </figure>
+      </section>
+
+      <section class="mt-6 grid gap-5 md:grid-cols-2 print:mt-4 print:grid-cols-2 print:gap-4">
+        <div>
+          <h2 class="font-display text-xl font-bold">Built to be trusted</h2>
+          <ul class="mt-1.5 list-disc space-y-1 pl-5 leading-relaxed">
+            <li>Questions, readbacks and alerts use fixed wording built from the form. The model only records data.</li>
+            <li>It explains terms like GCS, but never suggests a treatment.</li>
+            <li>Every value links to the exact words it came from; a value with no source is flagged.</li>
+            <li>Details that fit no field go to "Other details" instead of being lost.</li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="font-display text-xl font-bold">Results</h2>
+          <p class="mt-1.5 leading-relaxed">12 synthetic Hinglish handoffs, every field scored by hand-labelled answers.</p>
+          <table class="mt-2 w-full text-left text-sm">
+            <thead class="text-muted">
+              <tr class="border-b border-line"><th class="py-1.5 font-bold">Mode</th><th class="py-1.5 font-bold">Fields right</th><th class="py-1.5 font-bold">Critical alerts</th></tr>
+            </thead>
+            <tbody class="tabular-nums">
+              <tr class="border-b border-line"><td class="py-1.5">Live agent</td><td class="py-1.5">92%</td><td class="py-1.5">4 of 4</td></tr>
+              <tr><td class="py-1.5">Record in one go</td><td class="py-1.5">97%</td><td class="py-1.5">4 of 4</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="mt-6 grid gap-5 md:grid-cols-2 print:mt-4 print:grid-cols-2 print:gap-4">
+        <div>
+          <h2 class="font-display text-xl font-bold">Built on</h2>
+          <p class="mt-1.5 leading-relaxed">
+            Gnani <b>Prisma v3.0</b> for speech-to-text, tuned with EMS drug and vitals terms, and Gnani <b>Timbre v3.0</b> for the agent's voice, streamed in real time. Groq gpt-oss-120b runs the conversation. React and FastAPI.
+          </p>
+        </div>
+        <div>
+          <h2 class="font-display text-xl font-bold">What's next</h2>
+          <ul class="mt-1.5 list-disc space-y-1 pl-5 leading-relaxed">
+            <li>The hospital sees the report fill in before the ambulance arrives.</li>
+            <li>Vitals from the monitor, time and place from the 108 call, and the report sent to state ePCR systems.</li>
+            <li>The same agent in a hospital OPD, taking complaint, history and vitals.</li>
+          </ul>
+        </div>
+      </section>
+
+      <nav class="mt-6 flex flex-wrap gap-2 border-t border-line pt-5 text-sm font-bold print:mt-4 print:pt-3" aria-label="Project links">
+        <a href="/" class="rounded-md bg-signal px-3 py-2 text-white hover:bg-signal-dark print:bg-transparent print:p-0 print:pr-4 print:text-ink">Try it: ems-voice-pcr.vercel.app</a>
+        <a href="https://drive.google.com/file/d/1XA8E2EQvbcwtzX_8U4FckM3M5vdC-80p/view?usp=sharing" target="_blank" rel="noopener noreferrer" class="rounded-md border border-line bg-white px-3 py-2 hover:border-ink print:border-0 print:p-0 print:pr-4">Demo video</a>
+        <a href="https://github.com/abhiraj75/ems_voice_pcr" target="_blank" rel="noopener noreferrer" class="rounded-md border border-line bg-white px-3 py-2 hover:border-ink print:border-0 print:p-0">Code: github.com/abhiraj75/ems_voice_pcr</a>
+      </nav>
+      <p class="mt-4 text-sm text-muted print:mt-2">Solo build. A prototype tested only on made-up patients; the safety rules are illustrative, not clinical guidance.</p>
+    </main>
+  </body>
+</html>

@@ -13,6 +13,7 @@ Paramedics in India spend 30 to 60 minutes on paperwork after a run, usually fro
 ## Try it
 
 - **App**: [ems-voice-pcr.vercel.app](https://ems-voice-pcr.vercel.app)
+- **One-page pitch**: [ems-voice-pcr.vercel.app/pitch](https://ems-voice-pcr.vercel.app/pitch/)
 - **API**: [ems-voice-pcr.onrender.com](https://ems-voice-pcr.onrender.com)
 - **Demo video (live agent, in Hindi)**: [Google Drive](https://drive.google.com/file/d/1XA8E2EQvbcwtzX_8U4FckM3M5vdC-80p/view?usp=sharing)
 

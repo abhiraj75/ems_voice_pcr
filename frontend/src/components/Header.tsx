@@ -1,4 +1,4 @@
-import { CircleHelp, Play } from "lucide-react";
+import { CircleHelp, FileText, Play } from "lucide-react";
 
 const topLink =
   "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-bold text-muted hover:bg-cabin hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/30";
@@ -52,6 +52,11 @@ export function Header({ mode, onModeChange, onHelp }: HeaderProps) {
           >
             <Play className="h-5 w-5" />
             <span className="hidden md:inline">Watch demo</span>
+          </a>
+          {/* New tab, so opening the pitch never cuts off a live session. */}
+          <a href="/pitch/" target="_blank" rel="noopener" className={topLink} aria-label="Read the one-page pitch">
+            <FileText className="h-5 w-5" />
+            <span className="hidden md:inline">Pitch</span>
           </a>
         </div>
       </div>
